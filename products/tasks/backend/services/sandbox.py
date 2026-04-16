@@ -45,6 +45,7 @@ class SandboxStatus(str, Enum):
 class SandboxTemplate(str, Enum):
     DEFAULT_BASE = "default_base"
     NOTEBOOK_BASE = "notebook_base"
+    STREAMLIT_BASE = "streamlit_base"
 
 
 class ExecutionResult(BaseModel):
@@ -75,6 +76,7 @@ class SandboxConfig(BaseModel):
     memory_gb: float = 16
     cpu_cores: float = 4
     disk_size_gb: float = 64
+    encrypted_ports: list[int] | None = None
 
 
 WORKING_DIR = "/tmp/workspace"
