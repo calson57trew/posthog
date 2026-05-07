@@ -1,30 +1,12 @@
 // AUTO-GENERATED from products/feature_flags/mcp/tools.yaml + OpenAPI — do not edit
 import { z } from 'zod'
 
-import type { Schemas } from '@/api/generated'
-import {
-    FeatureFlagsActivityRetrieveParams,
-    FeatureFlagsActivityRetrieveQueryParams,
-    FeatureFlagsCopyFlagsCreateBody,
-    FeatureFlagsCreateBody,
-    FeatureFlagsDependentFlagsListParams,
-    FeatureFlagsDestroyParams,
-    FeatureFlagsEvaluationReasonsRetrieveQueryParams,
-    FeatureFlagsListQueryParams,
-    FeatureFlagsPartialUpdateBody,
-    FeatureFlagsPartialUpdateParams,
-    FeatureFlagsRetrieveParams,
-    FeatureFlagsStatusRetrieveParams,
-    FeatureFlagsUserBlastRadiusCreateBody,
-    ScheduledChangesCreateBody,
-    ScheduledChangesDestroyParams,
-    ScheduledChangesListQueryParams,
-    ScheduledChangesPartialUpdateBody,
-    ScheduledChangesPartialUpdateParams,
-    ScheduledChangesRetrieveParams,
-} from '@/generated/feature_flags/api'
-import { withPostHogUrl, pickResponseFields, type WithPostHogUrl } from '@/tools/tool-utils'
 import type { Context, ToolBase, ZodObjectAny } from '@/tools/types'
+import { withPostHogUrl, pickResponseFields, type WithPostHogUrl } from '@/tools/tool-utils'
+
+import type { Schemas } from '@/api/generated'
+
+import { FeatureFlagsActivityRetrieveParams, FeatureFlagsActivityRetrieveQueryParams, FeatureFlagsCopyFlagsCreateBody, FeatureFlagsCreateBody, FeatureFlagsDependentFlagsListParams, FeatureFlagsDestroyParams, FeatureFlagsEvaluationReasonsRetrieveQueryParams, FeatureFlagsListQueryParams, FeatureFlagsPartialUpdateBody, FeatureFlagsPartialUpdateParams, FeatureFlagsRetrieveParams, FeatureFlagsStatusRetrieveParams, FeatureFlagsUserBlastRadiusCreateBody, ScheduledChangesCreateBody, ScheduledChangesDestroyParams, ScheduledChangesListQueryParams, ScheduledChangesPartialUpdateBody, ScheduledChangesPartialUpdateParams, ScheduledChangesRetrieveParams } from '@/generated/feature_flags/api'
 
 const CreateFeatureFlagSchema = FeatureFlagsCreateBody
 
@@ -34,24 +16,12 @@ const createFeatureFlag = (): ToolBase<typeof CreateFeatureFlagSchema, WithPostH
     handler: async (context: Context, params: z.infer<typeof CreateFeatureFlagSchema>) => {
         const projectId = await context.stateManager.getProjectId()
         const body: Record<string, unknown> = {}
-        if (params.key !== undefined) {
-            body['key'] = params.key
-        }
-        if (params.name !== undefined) {
-            body['name'] = params.name
-        }
-        if (params.filters !== undefined) {
-            body['filters'] = params.filters
-        }
-        if (params.active !== undefined) {
-            body['active'] = params.active
-        }
-        if (params.tags !== undefined) {
-            body['tags'] = params.tags
-        }
-        if (params.evaluation_contexts !== undefined) {
-            body['evaluation_contexts'] = params.evaluation_contexts
-        }
+        if (params.key !== undefined) {body["key"] = params.key}
+        if (params.name !== undefined) {body["name"] = params.name}
+        if (params.filters !== undefined) {body["filters"] = params.filters}
+        if (params.active !== undefined) {body["active"] = params.active}
+        if (params.tags !== undefined) {body["tags"] = params.tags}
+        if (params.evaluation_contexts !== undefined) {body["evaluation_contexts"] = params.evaluation_contexts}
         const result = await context.api.request<Schemas.FeatureFlag>({
             method: 'POST',
             path: `/api/projects/${encodeURIComponent(String(projectId))}/feature_flags/`,
@@ -77,16 +47,9 @@ const deleteFeatureFlag = (): ToolBase<typeof DeleteFeatureFlagSchema, Schemas.F
     },
 })
 
-const FeatureFlagGetAllSchema = FeatureFlagsListQueryParams.extend({
-    search: FeatureFlagsListQueryParams.shape['search'].describe(
-        'Search by feature flag key or name (case-insensitive). Use this to find the flag ID for get/update/delete tools.'
-    ),
-})
+const FeatureFlagGetAllSchema = (FeatureFlagsListQueryParams).extend({ search: FeatureFlagsListQueryParams.shape['search'].describe('Search by feature flag key or name (case-insensitive). Use this to find the flag ID for get/update/delete tools.') })
 
-const featureFlagGetAll = (): ToolBase<
-    typeof FeatureFlagGetAllSchema,
-    WithPostHogUrl<Schemas.PaginatedFeatureFlagList>
-> => ({
+const featureFlagGetAll = (): ToolBase<typeof FeatureFlagGetAllSchema, WithPostHogUrl<Schemas.PaginatedFeatureFlagList>> => ({
     name: 'feature-flag-get-all',
     schema: FeatureFlagGetAllSchema,
     handler: async (context: Context, params: z.infer<typeof FeatureFlagGetAllSchema>) => {
@@ -107,31 +70,17 @@ const featureFlagGetAll = (): ToolBase<
                 type: params.type,
             },
         })
-        const filtered = {
-            ...result,
-            results: (result.results ?? []).map((item: any) =>
-                pickResponseFields(item, ['id', 'key', 'name', 'updated_at', 'status', 'tags'])
-            ),
-        } as typeof result
-        return await withPostHogUrl(
-            context,
-            {
-                ...filtered,
-                results: await Promise.all(
-                    (filtered.results ?? []).map((item) => withPostHogUrl(context, item, `/feature_flags/${item.id}`))
-                ),
-            },
-            '/feature_flags'
-        )
+        const filtered = { ...result, results: (result.results ?? []).map((item: any) => pickResponseFields(item, ['id', 'key', 'name', 'updated_at', 'status', 'tags'])) } as typeof result
+        return await withPostHogUrl(context, {
+            ...filtered,
+            results: await Promise.all((filtered.results ?? []).map((item) => withPostHogUrl(context, item, `/feature_flags/${item.id}`))),
+        }, '/feature_flags')
     },
 })
 
 const FeatureFlagGetDefinitionSchema = FeatureFlagsRetrieveParams.omit({ project_id: true })
 
-const featureFlagGetDefinition = (): ToolBase<
-    typeof FeatureFlagGetDefinitionSchema,
-    WithPostHogUrl<Schemas.FeatureFlag>
-> => ({
+const featureFlagGetDefinition = (): ToolBase<typeof FeatureFlagGetDefinitionSchema, WithPostHogUrl<Schemas.FeatureFlag>> => ({
     name: 'feature-flag-get-definition',
     schema: FeatureFlagGetDefinitionSchema,
     handler: async (context: Context, params: z.infer<typeof FeatureFlagGetDefinitionSchema>) => {
@@ -144,14 +93,9 @@ const featureFlagGetDefinition = (): ToolBase<
     },
 })
 
-const FeatureFlagsActivityRetrieveSchema = FeatureFlagsActivityRetrieveParams.omit({ project_id: true }).extend(
-    FeatureFlagsActivityRetrieveQueryParams.shape
-)
+const FeatureFlagsActivityRetrieveSchema = FeatureFlagsActivityRetrieveParams.omit({ project_id: true }).extend(FeatureFlagsActivityRetrieveQueryParams.shape)
 
-const featureFlagsActivityRetrieve = (): ToolBase<
-    typeof FeatureFlagsActivityRetrieveSchema,
-    Schemas.ActivityLogPaginatedResponse
-> => ({
+const featureFlagsActivityRetrieve = (): ToolBase<typeof FeatureFlagsActivityRetrieveSchema, Schemas.ActivityLogPaginatedResponse> => ({
     name: 'feature-flags-activity-retrieve',
     schema: FeatureFlagsActivityRetrieveSchema,
     handler: async (context: Context, params: z.infer<typeof FeatureFlagsActivityRetrieveSchema>) => {
@@ -170,30 +114,17 @@ const featureFlagsActivityRetrieve = (): ToolBase<
 
 const FeatureFlagsCopyFlagsCreateSchema = FeatureFlagsCopyFlagsCreateBody
 
-const featureFlagsCopyFlagsCreate = (): ToolBase<
-    typeof FeatureFlagsCopyFlagsCreateSchema,
-    Schemas.CopyFlagsResponse
-> => ({
+const featureFlagsCopyFlagsCreate = (): ToolBase<typeof FeatureFlagsCopyFlagsCreateSchema, Schemas.CopyFlagsResponse> => ({
     name: 'feature-flags-copy-flags-create',
     schema: FeatureFlagsCopyFlagsCreateSchema,
     handler: async (context: Context, params: z.infer<typeof FeatureFlagsCopyFlagsCreateSchema>) => {
         const orgId = await context.stateManager.getOrgID()
         const body: Record<string, unknown> = {}
-        if (params.feature_flag_key !== undefined) {
-            body['feature_flag_key'] = params.feature_flag_key
-        }
-        if (params.from_project !== undefined) {
-            body['from_project'] = params.from_project
-        }
-        if (params.target_project_ids !== undefined) {
-            body['target_project_ids'] = params.target_project_ids
-        }
-        if (params.copy_schedule !== undefined) {
-            body['copy_schedule'] = params.copy_schedule
-        }
-        if (params.disable_copied_flag !== undefined) {
-            body['disable_copied_flag'] = params.disable_copied_flag
-        }
+        if (params.feature_flag_key !== undefined) {body["feature_flag_key"] = params.feature_flag_key}
+        if (params.from_project !== undefined) {body["from_project"] = params.from_project}
+        if (params.target_project_ids !== undefined) {body["target_project_ids"] = params.target_project_ids}
+        if (params.copy_schedule !== undefined) {body["copy_schedule"] = params.copy_schedule}
+        if (params.disable_copied_flag !== undefined) {body["disable_copied_flag"] = params.disable_copied_flag}
         const result = await context.api.request<Schemas.CopyFlagsResponse>({
             method: 'POST',
             path: `/api/organizations/${encodeURIComponent(String(orgId))}/feature_flags/copy_flags/`,
@@ -205,10 +136,7 @@ const featureFlagsCopyFlagsCreate = (): ToolBase<
 
 const FeatureFlagsDependentFlagsRetrieveSchema = FeatureFlagsDependentFlagsListParams.omit({ project_id: true })
 
-const featureFlagsDependentFlagsRetrieve = (): ToolBase<
-    typeof FeatureFlagsDependentFlagsRetrieveSchema,
-    Schemas.DependentFlag[]
-> => ({
+const featureFlagsDependentFlagsRetrieve = (): ToolBase<typeof FeatureFlagsDependentFlagsRetrieveSchema, Schemas.DependentFlag[]> => ({
     name: 'feature-flags-dependent-flags-retrieve',
     schema: FeatureFlagsDependentFlagsRetrieveSchema,
     handler: async (context: Context, params: z.infer<typeof FeatureFlagsDependentFlagsRetrieveSchema>) => {
@@ -223,10 +151,7 @@ const featureFlagsDependentFlagsRetrieve = (): ToolBase<
 
 const FeatureFlagsEvaluationReasonsRetrieveSchema = FeatureFlagsEvaluationReasonsRetrieveQueryParams
 
-const featureFlagsEvaluationReasonsRetrieve = (): ToolBase<
-    typeof FeatureFlagsEvaluationReasonsRetrieveSchema,
-    unknown
-> => ({
+const featureFlagsEvaluationReasonsRetrieve = (): ToolBase<typeof FeatureFlagsEvaluationReasonsRetrieveSchema, unknown> => ({
     name: 'feature-flags-evaluation-reasons-retrieve',
     schema: FeatureFlagsEvaluationReasonsRetrieveSchema,
     handler: async (context: Context, params: z.infer<typeof FeatureFlagsEvaluationReasonsRetrieveSchema>) => {
@@ -245,10 +170,7 @@ const featureFlagsEvaluationReasonsRetrieve = (): ToolBase<
 
 const FeatureFlagsStatusRetrieveSchema = FeatureFlagsStatusRetrieveParams.omit({ project_id: true })
 
-const featureFlagsStatusRetrieve = (): ToolBase<
-    typeof FeatureFlagsStatusRetrieveSchema,
-    Schemas.FeatureFlagStatusResponse
-> => ({
+const featureFlagsStatusRetrieve = (): ToolBase<typeof FeatureFlagsStatusRetrieveSchema, Schemas.FeatureFlagStatusResponse> => ({
     name: 'feature-flags-status-retrieve',
     schema: FeatureFlagsStatusRetrieveSchema,
     handler: async (context: Context, params: z.infer<typeof FeatureFlagsStatusRetrieveSchema>) => {
@@ -263,21 +185,14 @@ const featureFlagsStatusRetrieve = (): ToolBase<
 
 const FeatureFlagsUserBlastRadiusCreateSchema = FeatureFlagsUserBlastRadiusCreateBody
 
-const featureFlagsUserBlastRadiusCreate = (): ToolBase<
-    typeof FeatureFlagsUserBlastRadiusCreateSchema,
-    Schemas.UserBlastRadiusResponse
-> => ({
+const featureFlagsUserBlastRadiusCreate = (): ToolBase<typeof FeatureFlagsUserBlastRadiusCreateSchema, Schemas.UserBlastRadiusResponse> => ({
     name: 'feature-flags-user-blast-radius-create',
     schema: FeatureFlagsUserBlastRadiusCreateSchema,
     handler: async (context: Context, params: z.infer<typeof FeatureFlagsUserBlastRadiusCreateSchema>) => {
         const projectId = await context.stateManager.getProjectId()
         const body: Record<string, unknown> = {}
-        if (params.condition !== undefined) {
-            body['condition'] = params.condition
-        }
-        if (params.group_type_index !== undefined) {
-            body['group_type_index'] = params.group_type_index
-        }
+        if (params.condition !== undefined) {body["condition"] = params.condition}
+        if (params.group_type_index !== undefined) {body["group_type_index"] = params.group_type_index}
         const result = await context.api.request<Schemas.UserBlastRadiusResponse>({
             method: 'POST',
             path: `/api/projects/${encodeURIComponent(String(projectId))}/feature_flags/user_blast_radius/`,
@@ -295,30 +210,14 @@ const scheduledChangesCreate = (): ToolBase<typeof ScheduledChangesCreateSchema,
     handler: async (context: Context, params: z.infer<typeof ScheduledChangesCreateSchema>) => {
         const projectId = await context.stateManager.getProjectId()
         const body: Record<string, unknown> = {}
-        if (params.record_id !== undefined) {
-            body['record_id'] = params.record_id
-        }
-        if (params.model_name !== undefined) {
-            body['model_name'] = params.model_name
-        }
-        if (params.payload !== undefined) {
-            body['payload'] = params.payload
-        }
-        if (params.scheduled_at !== undefined) {
-            body['scheduled_at'] = params.scheduled_at
-        }
-        if (params.is_recurring !== undefined) {
-            body['is_recurring'] = params.is_recurring
-        }
-        if (params.recurrence_interval !== undefined) {
-            body['recurrence_interval'] = params.recurrence_interval
-        }
-        if (params.cron_expression !== undefined) {
-            body['cron_expression'] = params.cron_expression
-        }
-        if (params.end_date !== undefined) {
-            body['end_date'] = params.end_date
-        }
+        if (params.record_id !== undefined) {body["record_id"] = params.record_id}
+        if (params.model_name !== undefined) {body["model_name"] = params.model_name}
+        if (params.payload !== undefined) {body["payload"] = params.payload}
+        if (params.scheduled_at !== undefined) {body["scheduled_at"] = params.scheduled_at}
+        if (params.is_recurring !== undefined) {body["is_recurring"] = params.is_recurring}
+        if (params.recurrence_interval !== undefined) {body["recurrence_interval"] = params.recurrence_interval}
+        if (params.cron_expression !== undefined) {body["cron_expression"] = params.cron_expression}
+        if (params.end_date !== undefined) {body["end_date"] = params.end_date}
         const result = await context.api.request<Schemas.ScheduledChange>({
             method: 'POST',
             path: `/api/projects/${encodeURIComponent(String(projectId))}/scheduled_changes/`,
@@ -358,19 +257,9 @@ const scheduledChangesGet = (): ToolBase<typeof ScheduledChangesGetSchema, Schem
     },
 })
 
-const ScheduledChangesListSchema = ScheduledChangesListQueryParams.extend({
-    model_name: ScheduledChangesListQueryParams.shape['model_name'].describe(
-        'Filter by model type. Use "FeatureFlag" to see feature flag schedules.'
-    ),
-    record_id: ScheduledChangesListQueryParams.shape['record_id'].describe(
-        'Filter by the ID of a specific feature flag.'
-    ),
-})
+const ScheduledChangesListSchema = (ScheduledChangesListQueryParams).extend({ model_name: ScheduledChangesListQueryParams.shape['model_name'].describe('Filter by model type. Use "FeatureFlag" to see feature flag schedules.'), record_id: ScheduledChangesListQueryParams.shape['record_id'].describe('Filter by the ID of a specific feature flag.') })
 
-const scheduledChangesList = (): ToolBase<
-    typeof ScheduledChangesListSchema,
-    WithPostHogUrl<Schemas.PaginatedScheduledChangeList>
-> => ({
+const scheduledChangesList = (): ToolBase<typeof ScheduledChangesListSchema, WithPostHogUrl<Schemas.PaginatedScheduledChangeList>> => ({
     name: 'scheduled-changes-list',
     schema: ScheduledChangesListSchema,
     handler: async (context: Context, params: z.infer<typeof ScheduledChangesListSchema>) => {
@@ -389,9 +278,7 @@ const scheduledChangesList = (): ToolBase<
     },
 })
 
-const ScheduledChangesUpdateSchema = ScheduledChangesPartialUpdateParams.omit({ project_id: true }).extend(
-    ScheduledChangesPartialUpdateBody.shape
-)
+const ScheduledChangesUpdateSchema = ScheduledChangesPartialUpdateParams.omit({ project_id: true }).extend(ScheduledChangesPartialUpdateBody.shape)
 
 const scheduledChangesUpdate = (): ToolBase<typeof ScheduledChangesUpdateSchema, Schemas.ScheduledChange> => ({
     name: 'scheduled-changes-update',
@@ -399,30 +286,14 @@ const scheduledChangesUpdate = (): ToolBase<typeof ScheduledChangesUpdateSchema,
     handler: async (context: Context, params: z.infer<typeof ScheduledChangesUpdateSchema>) => {
         const projectId = await context.stateManager.getProjectId()
         const body: Record<string, unknown> = {}
-        if (params.record_id !== undefined) {
-            body['record_id'] = params.record_id
-        }
-        if (params.model_name !== undefined) {
-            body['model_name'] = params.model_name
-        }
-        if (params.payload !== undefined) {
-            body['payload'] = params.payload
-        }
-        if (params.scheduled_at !== undefined) {
-            body['scheduled_at'] = params.scheduled_at
-        }
-        if (params.is_recurring !== undefined) {
-            body['is_recurring'] = params.is_recurring
-        }
-        if (params.recurrence_interval !== undefined) {
-            body['recurrence_interval'] = params.recurrence_interval
-        }
-        if (params.cron_expression !== undefined) {
-            body['cron_expression'] = params.cron_expression
-        }
-        if (params.end_date !== undefined) {
-            body['end_date'] = params.end_date
-        }
+        if (params.record_id !== undefined) {body["record_id"] = params.record_id}
+        if (params.model_name !== undefined) {body["model_name"] = params.model_name}
+        if (params.payload !== undefined) {body["payload"] = params.payload}
+        if (params.scheduled_at !== undefined) {body["scheduled_at"] = params.scheduled_at}
+        if (params.is_recurring !== undefined) {body["is_recurring"] = params.is_recurring}
+        if (params.recurrence_interval !== undefined) {body["recurrence_interval"] = params.recurrence_interval}
+        if (params.cron_expression !== undefined) {body["cron_expression"] = params.cron_expression}
+        if (params.end_date !== undefined) {body["end_date"] = params.end_date}
         const result = await context.api.request<Schemas.ScheduledChange>({
             method: 'PATCH',
             path: `/api/projects/${encodeURIComponent(String(projectId))}/scheduled_changes/${encodeURIComponent(String(params.id))}/`,
@@ -432,9 +303,7 @@ const scheduledChangesUpdate = (): ToolBase<typeof ScheduledChangesUpdateSchema,
     },
 })
 
-const UpdateFeatureFlagSchema = FeatureFlagsPartialUpdateParams.omit({ project_id: true }).extend(
-    FeatureFlagsPartialUpdateBody.shape
-)
+const UpdateFeatureFlagSchema = FeatureFlagsPartialUpdateParams.omit({ project_id: true }).extend(FeatureFlagsPartialUpdateBody.shape)
 
 const updateFeatureFlag = (): ToolBase<typeof UpdateFeatureFlagSchema, WithPostHogUrl<Schemas.FeatureFlag>> => ({
     name: 'update-feature-flag',
@@ -442,24 +311,12 @@ const updateFeatureFlag = (): ToolBase<typeof UpdateFeatureFlagSchema, WithPostH
     handler: async (context: Context, params: z.infer<typeof UpdateFeatureFlagSchema>) => {
         const projectId = await context.stateManager.getProjectId()
         const body: Record<string, unknown> = {}
-        if (params.key !== undefined) {
-            body['key'] = params.key
-        }
-        if (params.name !== undefined) {
-            body['name'] = params.name
-        }
-        if (params.filters !== undefined) {
-            body['filters'] = params.filters
-        }
-        if (params.active !== undefined) {
-            body['active'] = params.active
-        }
-        if (params.tags !== undefined) {
-            body['tags'] = params.tags
-        }
-        if (params.evaluation_contexts !== undefined) {
-            body['evaluation_contexts'] = params.evaluation_contexts
-        }
+        if (params.key !== undefined) {body["key"] = params.key}
+        if (params.name !== undefined) {body["name"] = params.name}
+        if (params.filters !== undefined) {body["filters"] = params.filters}
+        if (params.active !== undefined) {body["active"] = params.active}
+        if (params.tags !== undefined) {body["tags"] = params.tags}
+        if (params.evaluation_contexts !== undefined) {body["evaluation_contexts"] = params.evaluation_contexts}
         const result = await context.api.request<Schemas.FeatureFlag>({
             method: 'PATCH',
             path: `/api/projects/${encodeURIComponent(String(projectId))}/feature_flags/${encodeURIComponent(String(params.id))}/`,

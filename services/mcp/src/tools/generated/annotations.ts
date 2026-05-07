@@ -1,24 +1,14 @@
 // AUTO-GENERATED from products/annotations/mcp/tools.yaml + OpenAPI — do not edit
 import { z } from 'zod'
 
-import type { Schemas } from '@/api/generated'
-import {
-    AnnotationsCreateBody,
-    AnnotationsDestroyParams,
-    AnnotationsListQueryParams,
-    AnnotationsPartialUpdateBody,
-    AnnotationsPartialUpdateParams,
-    AnnotationsRetrieveParams,
-} from '@/generated/annotations/api'
-import { withPostHogUrl, type WithPostHogUrl } from '@/tools/tool-utils'
 import type { Context, ToolBase, ZodObjectAny } from '@/tools/types'
+import { withPostHogUrl, type WithPostHogUrl } from '@/tools/tool-utils'
 
-const AnnotationCreateSchema = AnnotationsCreateBody.omit({
-    creation_type: true,
-    dashboard_item: true,
-    dashboard_id: true,
-    deleted: true,
-})
+import type { Schemas } from '@/api/generated'
+
+import { AnnotationsCreateBody, AnnotationsDestroyParams, AnnotationsListQueryParams, AnnotationsPartialUpdateBody, AnnotationsPartialUpdateParams, AnnotationsRetrieveParams } from '@/generated/annotations/api'
+
+const AnnotationCreateSchema = AnnotationsCreateBody.omit({ 'creation_type': true, 'dashboard_item': true, 'dashboard_id': true, 'deleted': true })
 
 const annotationCreate = (): ToolBase<typeof AnnotationCreateSchema, Schemas.Annotation> => ({
     name: 'annotation-create',
@@ -26,15 +16,9 @@ const annotationCreate = (): ToolBase<typeof AnnotationCreateSchema, Schemas.Ann
     handler: async (context: Context, params: z.infer<typeof AnnotationCreateSchema>) => {
         const projectId = await context.stateManager.getProjectId()
         const body: Record<string, unknown> = {}
-        if (params.content !== undefined) {
-            body['content'] = params.content
-        }
-        if (params.date_marker !== undefined) {
-            body['date_marker'] = params.date_marker
-        }
-        if (params.scope !== undefined) {
-            body['scope'] = params.scope
-        }
+        if (params.content !== undefined) {body["content"] = params.content}
+        if (params.date_marker !== undefined) {body["date_marker"] = params.date_marker}
+        if (params.scope !== undefined) {body["scope"] = params.scope}
         const result = await context.api.request<Schemas.Annotation>({
             method: 'POST',
             path: `/api/projects/${encodeURIComponent(String(projectId))}/annotations/`,
@@ -77,10 +61,7 @@ const annotationRetrieve = (): ToolBase<typeof AnnotationRetrieveSchema, Schemas
 
 const AnnotationsListSchema = AnnotationsListQueryParams
 
-const annotationsList = (): ToolBase<
-    typeof AnnotationsListSchema,
-    WithPostHogUrl<Schemas.PaginatedAnnotationList>
-> => ({
+const annotationsList = (): ToolBase<typeof AnnotationsListSchema, WithPostHogUrl<Schemas.PaginatedAnnotationList>> => ({
     name: 'annotations-list',
     schema: AnnotationsListSchema,
     handler: async (context: Context, params: z.infer<typeof AnnotationsListSchema>) => {
@@ -98,10 +79,7 @@ const annotationsList = (): ToolBase<
     },
 })
 
-const AnnotationsPartialUpdateSchema = AnnotationsPartialUpdateParams.omit({ project_id: true }).extend(
-    AnnotationsPartialUpdateBody.omit({ creation_type: true, dashboard_item: true, dashboard_id: true, deleted: true })
-        .shape
-)
+const AnnotationsPartialUpdateSchema = AnnotationsPartialUpdateParams.omit({ project_id: true }).extend(AnnotationsPartialUpdateBody.omit({ 'creation_type': true, 'dashboard_item': true, 'dashboard_id': true, 'deleted': true }).shape)
 
 const annotationsPartialUpdate = (): ToolBase<typeof AnnotationsPartialUpdateSchema, Schemas.Annotation> => ({
     name: 'annotations-partial-update',
@@ -109,15 +87,9 @@ const annotationsPartialUpdate = (): ToolBase<typeof AnnotationsPartialUpdateSch
     handler: async (context: Context, params: z.infer<typeof AnnotationsPartialUpdateSchema>) => {
         const projectId = await context.stateManager.getProjectId()
         const body: Record<string, unknown> = {}
-        if (params.content !== undefined) {
-            body['content'] = params.content
-        }
-        if (params.date_marker !== undefined) {
-            body['date_marker'] = params.date_marker
-        }
-        if (params.scope !== undefined) {
-            body['scope'] = params.scope
-        }
+        if (params.content !== undefined) {body["content"] = params.content}
+        if (params.date_marker !== undefined) {body["date_marker"] = params.date_marker}
+        if (params.scope !== undefined) {body["scope"] = params.scope}
         const result = await context.api.request<Schemas.Annotation>({
             method: 'PATCH',
             path: `/api/projects/${encodeURIComponent(String(projectId))}/annotations/${encodeURIComponent(String(params.id))}/`,

@@ -2,11 +2,8 @@
 # The tool list and operation IDs are kept in sync automatically:
 #   pnpm --filter=@posthog/mcp run scaffold-yaml -- --sync-all
 #
-# Subset file (filename != tools.yaml). The tools below wrap generic
-# hog_functions_* operations with error-tracking-flavored titles and
-# descriptions. Sync preserves them as "unmatched" because their
-# operationIds live under the hog_function tag rather than error_tracking
-# — this is the same pattern products/cdp/mcp/cdp_functions.yaml uses.
+# To enable a tool, set enabled: true and add required scopes + annotations.
+# All other fields (title, description, enrich_url, etc.) are yours to configure.
 category: Error tracking alerts
 feature: error_tracking
 url_prefix: /error_tracking
@@ -23,10 +20,10 @@ tools:
             idempotent: false
         title: Create error tracking alert
         description: >
-            Create an error tracking alert that fires when an issue is created, reopened, or starts spiking.
-            An alert is a HogFunction with `type=internal_destination` whose `filters.events` references one
-            of the three error-tracking lifecycle events. The events themselves are the trigger — there is
-            no threshold or evaluation window to configure.
+            Create an error tracking alert that fires when an issue is created, reopened, or starts spiking. An alert is
+            a HogFunction with `type=internal_destination` whose `filters.events` references one of the three
+            error-tracking lifecycle events. The events themselves are the trigger — there is no threshold or evaluation
+            window to configure.
 
 
             Trigger events:
@@ -120,13 +117,12 @@ tools:
                Webhooks must be `https://` URLs.
 
 
-            Event property reference — common across all three events:
-            `event.properties.name` (issue title), `event.properties.description` (truncated body),
-            `event.properties.status`, `event.properties.fingerprint`, `event.properties.exception_timestamp`,
-            `event.distinct_id` (issue id used in the deep link). Spiking events additionally expose
-            `event.properties.current_bucket_value` and `event.properties.computed_baseline`. Project
-            context is available as `{project.url}` (already includes `/project/<team_id>`),
-            `{project.name}`, and the alert's own metadata as `{source.url}` and `{source.name}`.
+            Event property reference — common across all three events: `event.properties.name` (issue title),
+            `event.properties.description` (truncated body), `event.properties.status`, `event.properties.fingerprint`,
+            `event.properties.exception_timestamp`, `event.distinct_id` (issue id used in the deep link). Spiking events
+            additionally expose `event.properties.current_bucket_value` and `event.properties.computed_baseline`.
+            Project context is available as `{project.url}` (already includes `/project/<team_id>`), `{project.name}`,
+            and the alert's own metadata as `{source.url}` and `{source.name}`.
         exclude_params:
             - _create_in_folder
             - batch_export_id
@@ -170,6 +166,21 @@ tools:
                     `template-microsoft-teams`, `template-linear`, `template-github`, `template-gitlab`.
             enabled:
                 description: Whether the alert is active. Defaults to true.
+    error-tracking-alerts-delete:
+        operation: hog_functions_destroy
+        enabled: true
+        scopes:
+            - hog_function:write
+        annotations:
+            readOnly: false
+            destructive: true
+            idempotent: false
+        title: Delete error tracking alert
+        description: >
+            Delete an error tracking alert by ID (soft delete). The alert stops firing immediately, but the HogFunction
+            row and its execution history are preserved. To re-enable a deleted alert, the user must re-create it;
+            partial-update with `enabled=true` will not resurrect a soft-deleted alert.
+        soft_delete: true
     error-tracking-alerts-list:
         operation: hog_functions_list
         enabled: true
@@ -182,12 +193,11 @@ tools:
         list: true
         title: List error tracking alerts
         description: >
-            List error tracking alerts in the project. Pass `type=internal_destination` and inspect each
-            entry's `filters.events` for one of `$error_tracking_issue_created`,
-            `$error_tracking_issue_reopened`, or `$error_tracking_issue_spiking` to identify alerts. The
-            same endpoint backs `cdp-functions-list`, so non-error-tracking destinations are also returned —
-            filter client-side by event id. Pagination caps at 100 per page; pass `limit=1000` (max 1000)
-            when scanning for an existing alert by trigger and channel.
+            List error tracking alerts in the project. Pass `type=internal_destination` and inspect each entry's
+            `filters.events` for one of `$error_tracking_issue_created`, `$error_tracking_issue_reopened`, or
+            `$error_tracking_issue_spiking` to identify alerts. The same endpoint backs `cdp-functions-list`, so
+            non-error-tracking destinations are also returned — filter client-side by event id. Pagination caps at 100
+            per page; pass `limit=1000` (max 1000) when scanning for an existing alert by trigger and channel.
         response:
             include:
                 - id
@@ -213,11 +223,11 @@ tools:
             idempotent: true
         title: Update error tracking alert
         description: >
-            Partially update an error tracking alert. Use to enable or disable an alert, rename it, change
-            the destination channel/URL, or adjust the Slack message body. The `type` field cannot be
-            changed after creation. To delete an alert, use `error-tracking-alerts-delete`. To change the
-            trigger event, set `filters.events` to a list with the new event id — but consider creating a
-            new alert instead so the old one's history is preserved.
+            Partially update an error tracking alert. Use to enable or disable an alert, rename it, change the
+            destination channel/URL, or adjust the Slack message body. The `type` field cannot be changed after
+            creation. To delete an alert, use `error-tracking-alerts-delete`. To change the trigger event, set
+            `filters.events` to a list with the new event id — but consider creating a new alert instead so the old
+            one's history is preserved.
         exclude_params:
             - _create_in_folder
             - batch_export_id
@@ -253,18 +263,3 @@ tools:
         param_overrides:
             enabled:
                 description: Set to true to activate the alert or false to silence it without deleting.
-    error-tracking-alerts-delete:
-        operation: hog_functions_destroy
-        enabled: true
-        scopes:
-            - hog_function:write
-        annotations:
-            readOnly: false
-            destructive: true
-            idempotent: false
-        title: Delete error tracking alert
-        description: >
-            Delete an error tracking alert by ID (soft delete). The alert stops firing immediately, but the
-            HogFunction row and its execution history are preserved. To re-enable a deleted alert, the user
-            must re-create it; partial-update with `enabled=true` will not resurrect a soft-deleted alert.
-        soft_delete: true

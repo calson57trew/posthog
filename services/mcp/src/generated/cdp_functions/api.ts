@@ -35,23 +35,23 @@ export const HogFunctionsCreateParams = /* @__PURE__ */ zod.object({
         ),
 })
 
-export const hogFunctionsCreateBodyNameMax = 400
+export const hogFunctionsCreateBodyNameMaxTwo = 400
 
-export const hogFunctionsCreateBodyInputsSchemaItemRequiredDefault = false
-export const hogFunctionsCreateBodyInputsSchemaItemSecretDefault = false
-export const hogFunctionsCreateBodyInputsSchemaItemHiddenDefault = false
-export const hogFunctionsCreateBodyFiltersOneSourceDefault = `events`
-export const hogFunctionsCreateBodyMaskingOneTtlMin = 60
-export const hogFunctionsCreateBodyMaskingOneTtlMax = 86400
+export const hogFunctionsCreateBodyInputsSchemaItemRequiredDefaultTwo = false
+export const hogFunctionsCreateBodyInputsSchemaItemSecretDefaultTwo = false
+export const hogFunctionsCreateBodyInputsSchemaItemHiddenDefaultTwo = false
+export const hogFunctionsCreateBodyFiltersOneSourceDefaultTwo = `events`
+export const hogFunctionsCreateBodyMaskingOneTtlMinTwo = 60
+export const hogFunctionsCreateBodyMaskingOneTtlMaxTwo = 86400
 
-export const hogFunctionsCreateBodyMappingsItemInputsSchemaItemRequiredDefault = false
-export const hogFunctionsCreateBodyMappingsItemInputsSchemaItemSecretDefault = false
-export const hogFunctionsCreateBodyMappingsItemInputsSchemaItemHiddenDefault = false
-export const hogFunctionsCreateBodyMappingsItemFiltersSourceDefault = `events`
-export const hogFunctionsCreateBodyTemplateIdMax = 400
+export const hogFunctionsCreateBodyMappingsItemInputsSchemaItemRequiredDefaultTwo = false
+export const hogFunctionsCreateBodyMappingsItemInputsSchemaItemSecretDefaultTwo = false
+export const hogFunctionsCreateBodyMappingsItemInputsSchemaItemHiddenDefaultTwo = false
+export const hogFunctionsCreateBodyMappingsItemFiltersSourceDefaultTwo = `events`
+export const hogFunctionsCreateBodyTemplateIdMaxTwo = 400
 
-export const hogFunctionsCreateBodyExecutionOrderMin = 0
-export const hogFunctionsCreateBodyExecutionOrderMax = 32767
+export const hogFunctionsCreateBodyExecutionOrderMinTwo = 0
+export const hogFunctionsCreateBodyExecutionOrderMaxTwo = 32767
 
 export const HogFunctionsCreateBody = /* @__PURE__ */ zod.object({
     type: zod
@@ -75,7 +75,7 @@ export const HogFunctionsCreateBody = /* @__PURE__ */ zod.object({
         .describe(
             'Function type: destination, site_destination, internal_destination, source_webhook, warehouse_source_webhook, site_app, or transformation.\n\n* `destination` - Destination\n* `site_destination` - Site Destination\n* `internal_destination` - Internal Destination\n* `source_webhook` - Source Webhook\n* `warehouse_source_webhook` - Warehouse Source Webhook\n* `site_app` - Site App\n* `transformation` - Transformation'
         ),
-    name: zod.string().max(hogFunctionsCreateBodyNameMax).nullish().describe('Display name for the function.'),
+    name: zod.string().max(hogFunctionsCreateBodyNameMaxTwo).nullish().describe('Display name for the function.'),
     description: zod.string().optional().describe('Human-readable description of what this function does.'),
     enabled: zod.boolean().optional().describe('Whether the function is active and processing events.'),
     hog: zod
@@ -107,10 +107,10 @@ export const HogFunctionsCreateBody = /* @__PURE__ */ zod.object({
                 key: zod.string(),
                 label: zod.string().optional(),
                 choices: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
-                required: zod.boolean().default(hogFunctionsCreateBodyInputsSchemaItemRequiredDefault),
+                required: zod.boolean().default(hogFunctionsCreateBodyInputsSchemaItemRequiredDefaultTwo),
                 default: zod.unknown().optional(),
-                secret: zod.boolean().default(hogFunctionsCreateBodyInputsSchemaItemSecretDefault),
-                hidden: zod.boolean().default(hogFunctionsCreateBodyInputsSchemaItemHiddenDefault),
+                secret: zod.boolean().default(hogFunctionsCreateBodyInputsSchemaItemSecretDefaultTwo),
+                hidden: zod.boolean().default(hogFunctionsCreateBodyInputsSchemaItemHiddenDefaultTwo),
                 description: zod.string().optional(),
                 templating: zod.union([zod.boolean(), zod.enum(['hog', 'liquid'])]).optional(),
             })
@@ -137,7 +137,7 @@ export const HogFunctionsCreateBody = /* @__PURE__ */ zod.object({
                 .describe(
                     '* `events` - events\n* `person-updates` - person-updates\n* `data-warehouse-table` - data-warehouse-table'
                 )
-                .default(hogFunctionsCreateBodyFiltersOneSourceDefault),
+                .default(hogFunctionsCreateBodyFiltersOneSourceDefaultTwo),
             actions: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
             events: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
             data_warehouse: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -153,8 +153,8 @@ export const HogFunctionsCreateBody = /* @__PURE__ */ zod.object({
         .object({
             ttl: zod
                 .number()
-                .min(hogFunctionsCreateBodyMaskingOneTtlMin)
-                .max(hogFunctionsCreateBodyMaskingOneTtlMax)
+                .min(hogFunctionsCreateBodyMaskingOneTtlMinTwo)
+                .max(hogFunctionsCreateBodyMaskingOneTtlMaxTwo)
                 .describe('Time-to-live in seconds for the masking cache (60–86400).'),
             threshold: zod.number().nullish().describe('Optional threshold count before masking applies.'),
             hash: zod.string().describe('Hog expression used to compute the masking hash.'),
@@ -193,14 +193,14 @@ export const HogFunctionsCreateBody = /* @__PURE__ */ zod.object({
                             choices: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
                             required: zod
                                 .boolean()
-                                .default(hogFunctionsCreateBodyMappingsItemInputsSchemaItemRequiredDefault),
+                                .default(hogFunctionsCreateBodyMappingsItemInputsSchemaItemRequiredDefaultTwo),
                             default: zod.unknown().optional(),
                             secret: zod
                                 .boolean()
-                                .default(hogFunctionsCreateBodyMappingsItemInputsSchemaItemSecretDefault),
+                                .default(hogFunctionsCreateBodyMappingsItemInputsSchemaItemSecretDefaultTwo),
                             hidden: zod
                                 .boolean()
-                                .default(hogFunctionsCreateBodyMappingsItemInputsSchemaItemHiddenDefault),
+                                .default(hogFunctionsCreateBodyMappingsItemInputsSchemaItemHiddenDefaultTwo),
                             description: zod.string().optional(),
                             templating: zod.union([zod.boolean(), zod.enum(['hog', 'liquid'])]).optional(),
                         })
@@ -228,7 +228,7 @@ export const HogFunctionsCreateBody = /* @__PURE__ */ zod.object({
                             .describe(
                                 '* `events` - events\n* `person-updates` - person-updates\n* `data-warehouse-table` - data-warehouse-table'
                             )
-                            .default(hogFunctionsCreateBodyMappingsItemFiltersSourceDefault),
+                            .default(hogFunctionsCreateBodyMappingsItemFiltersSourceDefaultTwo),
                         actions: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
                         events: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
                         data_warehouse: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -243,13 +243,13 @@ export const HogFunctionsCreateBody = /* @__PURE__ */ zod.object({
     icon_url: zod.string().nullish().describe("URL for the function's icon displayed in the UI."),
     template_id: zod
         .string()
-        .max(hogFunctionsCreateBodyTemplateIdMax)
+        .max(hogFunctionsCreateBodyTemplateIdMaxTwo)
         .nullish()
         .describe('ID of the template to create this function from.'),
     execution_order: zod
         .number()
-        .min(hogFunctionsCreateBodyExecutionOrderMin)
-        .max(hogFunctionsCreateBodyExecutionOrderMax)
+        .min(hogFunctionsCreateBodyExecutionOrderMinTwo)
+        .max(hogFunctionsCreateBodyExecutionOrderMaxTwo)
         .nullish()
         .describe('Execution priority for transformations. Lower values run first.'),
 })
@@ -272,23 +272,23 @@ export const HogFunctionsPartialUpdateParams = /* @__PURE__ */ zod.object({
         ),
 })
 
-export const hogFunctionsPartialUpdateBodyNameMax = 400
+export const hogFunctionsPartialUpdateBodyNameMaxTwo = 400
 
-export const hogFunctionsPartialUpdateBodyInputsSchemaItemRequiredDefault = false
-export const hogFunctionsPartialUpdateBodyInputsSchemaItemSecretDefault = false
-export const hogFunctionsPartialUpdateBodyInputsSchemaItemHiddenDefault = false
-export const hogFunctionsPartialUpdateBodyFiltersOneSourceDefault = `events`
-export const hogFunctionsPartialUpdateBodyMaskingOneTtlMin = 60
-export const hogFunctionsPartialUpdateBodyMaskingOneTtlMax = 86400
+export const hogFunctionsPartialUpdateBodyInputsSchemaItemRequiredDefaultTwo = false
+export const hogFunctionsPartialUpdateBodyInputsSchemaItemSecretDefaultTwo = false
+export const hogFunctionsPartialUpdateBodyInputsSchemaItemHiddenDefaultTwo = false
+export const hogFunctionsPartialUpdateBodyFiltersOneSourceDefaultTwo = `events`
+export const hogFunctionsPartialUpdateBodyMaskingOneTtlMinTwo = 60
+export const hogFunctionsPartialUpdateBodyMaskingOneTtlMaxTwo = 86400
 
-export const hogFunctionsPartialUpdateBodyMappingsItemInputsSchemaItemRequiredDefault = false
-export const hogFunctionsPartialUpdateBodyMappingsItemInputsSchemaItemSecretDefault = false
-export const hogFunctionsPartialUpdateBodyMappingsItemInputsSchemaItemHiddenDefault = false
-export const hogFunctionsPartialUpdateBodyMappingsItemFiltersSourceDefault = `events`
-export const hogFunctionsPartialUpdateBodyTemplateIdMax = 400
+export const hogFunctionsPartialUpdateBodyMappingsItemInputsSchemaItemRequiredDefaultTwo = false
+export const hogFunctionsPartialUpdateBodyMappingsItemInputsSchemaItemSecretDefaultTwo = false
+export const hogFunctionsPartialUpdateBodyMappingsItemInputsSchemaItemHiddenDefaultTwo = false
+export const hogFunctionsPartialUpdateBodyMappingsItemFiltersSourceDefaultTwo = `events`
+export const hogFunctionsPartialUpdateBodyTemplateIdMaxTwo = 400
 
-export const hogFunctionsPartialUpdateBodyExecutionOrderMin = 0
-export const hogFunctionsPartialUpdateBodyExecutionOrderMax = 32767
+export const hogFunctionsPartialUpdateBodyExecutionOrderMinTwo = 0
+export const hogFunctionsPartialUpdateBodyExecutionOrderMaxTwo = 32767
 
 export const HogFunctionsPartialUpdateBody = /* @__PURE__ */ zod.object({
     type: zod
@@ -312,7 +312,11 @@ export const HogFunctionsPartialUpdateBody = /* @__PURE__ */ zod.object({
         .describe(
             'Function type: destination, site_destination, internal_destination, source_webhook, warehouse_source_webhook, site_app, or transformation.\n\n* `destination` - Destination\n* `site_destination` - Site Destination\n* `internal_destination` - Internal Destination\n* `source_webhook` - Source Webhook\n* `warehouse_source_webhook` - Warehouse Source Webhook\n* `site_app` - Site App\n* `transformation` - Transformation'
         ),
-    name: zod.string().max(hogFunctionsPartialUpdateBodyNameMax).nullish().describe('Display name for the function.'),
+    name: zod
+        .string()
+        .max(hogFunctionsPartialUpdateBodyNameMaxTwo)
+        .nullish()
+        .describe('Display name for the function.'),
     description: zod.string().optional().describe('Human-readable description of what this function does.'),
     enabled: zod.boolean().optional().describe('Whether the function is active and processing events.'),
     hog: zod
@@ -344,10 +348,10 @@ export const HogFunctionsPartialUpdateBody = /* @__PURE__ */ zod.object({
                 key: zod.string(),
                 label: zod.string().optional(),
                 choices: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
-                required: zod.boolean().default(hogFunctionsPartialUpdateBodyInputsSchemaItemRequiredDefault),
+                required: zod.boolean().default(hogFunctionsPartialUpdateBodyInputsSchemaItemRequiredDefaultTwo),
                 default: zod.unknown().optional(),
-                secret: zod.boolean().default(hogFunctionsPartialUpdateBodyInputsSchemaItemSecretDefault),
-                hidden: zod.boolean().default(hogFunctionsPartialUpdateBodyInputsSchemaItemHiddenDefault),
+                secret: zod.boolean().default(hogFunctionsPartialUpdateBodyInputsSchemaItemSecretDefaultTwo),
+                hidden: zod.boolean().default(hogFunctionsPartialUpdateBodyInputsSchemaItemHiddenDefaultTwo),
                 description: zod.string().optional(),
                 templating: zod.union([zod.boolean(), zod.enum(['hog', 'liquid'])]).optional(),
             })
@@ -374,7 +378,7 @@ export const HogFunctionsPartialUpdateBody = /* @__PURE__ */ zod.object({
                 .describe(
                     '* `events` - events\n* `person-updates` - person-updates\n* `data-warehouse-table` - data-warehouse-table'
                 )
-                .default(hogFunctionsPartialUpdateBodyFiltersOneSourceDefault),
+                .default(hogFunctionsPartialUpdateBodyFiltersOneSourceDefaultTwo),
             actions: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
             events: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
             data_warehouse: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -390,8 +394,8 @@ export const HogFunctionsPartialUpdateBody = /* @__PURE__ */ zod.object({
         .object({
             ttl: zod
                 .number()
-                .min(hogFunctionsPartialUpdateBodyMaskingOneTtlMin)
-                .max(hogFunctionsPartialUpdateBodyMaskingOneTtlMax)
+                .min(hogFunctionsPartialUpdateBodyMaskingOneTtlMinTwo)
+                .max(hogFunctionsPartialUpdateBodyMaskingOneTtlMaxTwo)
                 .describe('Time-to-live in seconds for the masking cache (60–86400).'),
             threshold: zod.number().nullish().describe('Optional threshold count before masking applies.'),
             hash: zod.string().describe('Hog expression used to compute the masking hash.'),
@@ -430,14 +434,14 @@ export const HogFunctionsPartialUpdateBody = /* @__PURE__ */ zod.object({
                             choices: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
                             required: zod
                                 .boolean()
-                                .default(hogFunctionsPartialUpdateBodyMappingsItemInputsSchemaItemRequiredDefault),
+                                .default(hogFunctionsPartialUpdateBodyMappingsItemInputsSchemaItemRequiredDefaultTwo),
                             default: zod.unknown().optional(),
                             secret: zod
                                 .boolean()
-                                .default(hogFunctionsPartialUpdateBodyMappingsItemInputsSchemaItemSecretDefault),
+                                .default(hogFunctionsPartialUpdateBodyMappingsItemInputsSchemaItemSecretDefaultTwo),
                             hidden: zod
                                 .boolean()
-                                .default(hogFunctionsPartialUpdateBodyMappingsItemInputsSchemaItemHiddenDefault),
+                                .default(hogFunctionsPartialUpdateBodyMappingsItemInputsSchemaItemHiddenDefaultTwo),
                             description: zod.string().optional(),
                             templating: zod.union([zod.boolean(), zod.enum(['hog', 'liquid'])]).optional(),
                         })
@@ -465,7 +469,7 @@ export const HogFunctionsPartialUpdateBody = /* @__PURE__ */ zod.object({
                             .describe(
                                 '* `events` - events\n* `person-updates` - person-updates\n* `data-warehouse-table` - data-warehouse-table'
                             )
-                            .default(hogFunctionsPartialUpdateBodyMappingsItemFiltersSourceDefault),
+                            .default(hogFunctionsPartialUpdateBodyMappingsItemFiltersSourceDefaultTwo),
                         actions: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
                         events: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
                         data_warehouse: zod.array(zod.record(zod.string(), zod.unknown())).optional(),
@@ -480,13 +484,13 @@ export const HogFunctionsPartialUpdateBody = /* @__PURE__ */ zod.object({
     icon_url: zod.string().nullish().describe("URL for the function's icon displayed in the UI."),
     template_id: zod
         .string()
-        .max(hogFunctionsPartialUpdateBodyTemplateIdMax)
+        .max(hogFunctionsPartialUpdateBodyTemplateIdMaxTwo)
         .nullish()
         .describe('ID of the template to create this function from.'),
     execution_order: zod
         .number()
-        .min(hogFunctionsPartialUpdateBodyExecutionOrderMin)
-        .max(hogFunctionsPartialUpdateBodyExecutionOrderMax)
+        .min(hogFunctionsPartialUpdateBodyExecutionOrderMinTwo)
+        .max(hogFunctionsPartialUpdateBodyExecutionOrderMaxTwo)
         .nullish()
         .describe('Execution priority for transformations. Lower values run first.'),
 })
