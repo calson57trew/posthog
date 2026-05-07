@@ -38,6 +38,22 @@ const errorTrackingAlertsCreate = (): ToolBase<typeof ErrorTrackingAlertsCreateS
     },
 })
 
+const ErrorTrackingAlertsDeleteSchema = HogFunctionsDestroyParams.omit({ project_id: true })
+
+const errorTrackingAlertsDelete = (): ToolBase<typeof ErrorTrackingAlertsDeleteSchema, Schemas.HogFunction> => ({
+    name: 'error-tracking-alerts-delete',
+    schema: ErrorTrackingAlertsDeleteSchema,
+    handler: async (context: Context, params: z.infer<typeof ErrorTrackingAlertsDeleteSchema>) => {
+        const projectId = await context.stateManager.getProjectId()
+        const result = await context.api.request<Schemas.HogFunction>({
+            method: 'PATCH',
+            path: `/api/projects/${encodeURIComponent(String(projectId))}/hog_functions/${encodeURIComponent(String(params.id))}/`,
+            body: { deleted: true },
+        })
+        return result
+    },
+})
+
 const ErrorTrackingAlertsListSchema = HogFunctionsListQueryParams
 
 const errorTrackingAlertsList = (): ToolBase<typeof ErrorTrackingAlertsListSchema, WithPostHogUrl<Schemas.PaginatedHogFunctionMinimalList>> => ({
@@ -94,25 +110,9 @@ const errorTrackingAlertsPartialUpdate = (): ToolBase<typeof ErrorTrackingAlerts
     },
 })
 
-const ErrorTrackingAlertsDeleteSchema = HogFunctionsDestroyParams.omit({ project_id: true })
-
-const errorTrackingAlertsDelete = (): ToolBase<typeof ErrorTrackingAlertsDeleteSchema, Schemas.HogFunction> => ({
-    name: 'error-tracking-alerts-delete',
-    schema: ErrorTrackingAlertsDeleteSchema,
-    handler: async (context: Context, params: z.infer<typeof ErrorTrackingAlertsDeleteSchema>) => {
-        const projectId = await context.stateManager.getProjectId()
-        const result = await context.api.request<Schemas.HogFunction>({
-            method: 'PATCH',
-            path: `/api/projects/${encodeURIComponent(String(projectId))}/hog_functions/${encodeURIComponent(String(params.id))}/`,
-            body: { deleted: true },
-        })
-        return result
-    },
-})
-
 export const GENERATED_TOOLS: Record<string, () => ToolBase<ZodObjectAny>> = {
     'error-tracking-alerts-create': errorTrackingAlertsCreate,
+    'error-tracking-alerts-delete': errorTrackingAlertsDelete,
     'error-tracking-alerts-list': errorTrackingAlertsList,
     'error-tracking-alerts-partial-update': errorTrackingAlertsPartialUpdate,
-    'error-tracking-alerts-delete': errorTrackingAlertsDelete,
 }
