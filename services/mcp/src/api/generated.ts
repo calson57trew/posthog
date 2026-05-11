@@ -20148,6 +20148,17 @@ export namespace Schemas {
       OnDemand: 'on_demand',
     } as const;
 
+    /**
+     * Body of POST /vision/lenses/{id}/observe/.
+     */
+    export interface ObserveRequest {
+      /**
+         * ID of the session recording to apply the lens to.
+         * @maxLength 200
+         */
+      session_id: string;
+    }
+
     export interface OfflineExperimentItemsRequest {
       /** `$ai_experiment_id` whose offline-evaluation items to return. */
       experiment_id: string;

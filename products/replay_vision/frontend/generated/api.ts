@@ -9,6 +9,7 @@ import { apiMutator } from '../../../../frontend/src/lib/api-orval-mutator'
  * OpenAPI spec version: 1.0.0
  */
 import type {
+    ObserveRequestApi,
     PaginatedReplayLensListApi,
     PaginatedReplayObservationListApi,
     PatchedReplayLensApi,
@@ -192,5 +193,30 @@ export const visionLensesDestroy = async (projectId: string, id: string, options
     return apiMutator<void>(getVisionLensesDestroyUrl(projectId, id), {
         ...options,
         method: 'DELETE',
+    })
+}
+
+export const getVisionLensesObserveCreateUrl = (projectId: string, id: string) => {
+    return `/api/environments/${projectId}/vision/lenses/${id}/observe/`
+}
+
+/**
+ * Apply this lens to one specific session, on demand.
+
+Bypasses the lens's query and sampling. Idempotent against the
+`UNIQUE(lens, session_id)` constraint — a second call for the same session
+returns the existing observation (200) rather than creating a duplicate.
+ */
+export const visionLensesObserveCreate = async (
+    projectId: string,
+    id: string,
+    observeRequestApi: ObserveRequestApi,
+    options?: RequestInit
+): Promise<ReplayObservationApi> => {
+    return apiMutator<ReplayObservationApi>(getVisionLensesObserveCreateUrl(projectId, id), {
+        ...options,
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...options?.headers },
+        body: JSON.stringify(observeRequestApi),
     })
 }

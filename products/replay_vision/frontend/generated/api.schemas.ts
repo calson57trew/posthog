@@ -282,6 +282,17 @@ export interface PatchedReplayLensApi {
     readonly updated_at?: string
 }
 
+/**
+ * Body of POST /vision/lenses/{id}/observe/.
+ */
+export interface ObserveRequestApi {
+    /**
+     * ID of the session recording to apply the lens to.
+     * @maxLength 200
+     */
+    session_id: string
+}
+
 export type VisionLensesListParams = {
     /**
      * Filter to lenses that emit Signals.

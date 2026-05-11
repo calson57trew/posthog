@@ -133,3 +133,21 @@ export const VisionLensesPartialUpdateBody = /* @__PURE__ */ zod.object({
             'When true, the prompt is augmented with the Signal side mission and the lens emits PostHog Signals.'
         ),
 })
+
+/**
+ * Apply this lens to one specific session, on demand.
+
+Bypasses the lens's query and sampling. Idempotent against the
+`UNIQUE(lens, session_id)` constraint — a second call for the same session
+returns the existing observation (200) rather than creating a duplicate.
+ */
+export const visionLensesObserveCreateBodySessionIdMax = 200
+
+export const VisionLensesObserveCreateBody = /* @__PURE__ */ zod
+    .object({
+        session_id: zod
+            .string()
+            .max(visionLensesObserveCreateBodySessionIdMax)
+            .describe('ID of the session recording to apply the lens to.'),
+    })
+    .describe('Body of POST \/vision\/lenses\/{id}\/observe\/.')
