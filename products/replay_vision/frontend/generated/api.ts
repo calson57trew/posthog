@@ -10,6 +10,7 @@ import { apiMutator } from '../../../../frontend/src/lib/api-orval-mutator'
  */
 import type {
     ObserveRequestApi,
+    ObserveResponseApi,
     PaginatedReplayLensListApi,
     PaginatedReplayObservationListApi,
     PatchedReplayLensApi,
@@ -203,17 +204,20 @@ export const getVisionLensesObserveCreateUrl = (projectId: string, id: string) =
 /**
  * Apply this lens to one specific session, on demand.
 
-Bypasses the lens's query and sampling. Idempotent against the
-`UNIQUE(lens, session_id)` constraint — a second call for the same session
-returns the existing observation (200) rather than creating a duplicate.
+Bypasses the lens's query and sampling. Returns 202 with the workflow
+handle; clients look up the resulting `ReplayObservation` via the
+observations list filtered by `session_id`.
+
+Dedup: the deterministic per-(lens, session) workflow_id makes duplicate
+dispatches coalesce in Temporal.
  */
 export const visionLensesObserveCreate = async (
     projectId: string,
     id: string,
     observeRequestApi: ObserveRequestApi,
     options?: RequestInit
-): Promise<ReplayObservationApi> => {
-    return apiMutator<ReplayObservationApi>(getVisionLensesObserveCreateUrl(projectId, id), {
+): Promise<ObserveResponseApi> => {
+    return apiMutator<ObserveResponseApi>(getVisionLensesObserveCreateUrl(projectId, id), {
         ...options,
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...options?.headers },

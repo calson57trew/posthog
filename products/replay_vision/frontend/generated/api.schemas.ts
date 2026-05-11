@@ -293,6 +293,14 @@ export interface ObserveRequestApi {
     session_id: string
 }
 
+/**
+ * Async-accepted response for POST /vision/lenses/{id}/observe/.
+ */
+export interface ObserveResponseApi {
+    /** Temporal workflow id for this lens application. Look up the resulting ReplayObservation via GET /vision/lenses/{id}/observations/?session_id=<session_id>. */
+    workflow_id: string
+}
+
 export type VisionLensesListParams = {
     /**
      * Filter to lenses that emit Signals.

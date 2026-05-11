@@ -137,9 +137,12 @@ export const VisionLensesPartialUpdateBody = /* @__PURE__ */ zod.object({
 /**
  * Apply this lens to one specific session, on demand.
 
-Bypasses the lens's query and sampling. Idempotent against the
-`UNIQUE(lens, session_id)` constraint — a second call for the same session
-returns the existing observation (200) rather than creating a duplicate.
+Bypasses the lens's query and sampling. Returns 202 with the workflow
+handle; clients look up the resulting `ReplayObservation` via the
+observations list filtered by `session_id`.
+
+Dedup: the deterministic per-(lens, session) workflow_id makes duplicate
+dispatches coalesce in Temporal.
  */
 export const visionLensesObserveCreateBodySessionIdMax = 200
 
