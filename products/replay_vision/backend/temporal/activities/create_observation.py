@@ -14,20 +14,12 @@ from products.replay_vision.backend.temporal.types import CreateObservationInput
 def create_observation_activity(inputs: CreateObservationInputs) -> CreateObservationOutput:
     """Snapshot the lens config + version and INSERT the observation row in `pending`.
 
-    Workflow owns row creation: triggers (schedule fire, /observe/) carry no
-    observation_id and don't touch Postgres themselves. This activity is the single
-    point that materializes a row.
-
-    Dedup: the unique `(lens_id, session_id)` constraint catches a duplicate
-    application — we return `was_created=False` and let the workflow exit as a
-    no-op rather than racing the row that already owns this slot.
+    On `UNIQUE(lens_id, session_id)` conflict: return `was_created=False` so the
+    workflow can exit cleanly without racing the row that already owns the slot.
     """
     lens_pk = uuid.UUID(inputs.lens_id)
     lens = ReplayLens.objects.filter(pk=lens_pk, team_id=inputs.team_id).first()
     if lens is None:
-        # Either lens was hard-deleted between trigger and workflow start, or the trigger
-        # was constructed against a lens from another team. Either way, there's nothing
-        # to record — surface as an activity failure so Temporal records it explicitly.
         raise ValueError(f"ReplayLens {inputs.lens_id} not found for team {inputs.team_id}")
 
     try:

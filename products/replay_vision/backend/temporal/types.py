@@ -2,12 +2,7 @@ from pydantic import BaseModel
 
 
 class ApplyLensInputs(BaseModel, frozen=True):
-    """Input to ApplyLensWorkflow.
-
-    Carries no observation state — the workflow creates the row itself in its first
-    activity. The trigger only supplies the lens, the session it picked, the team
-    boundary, and how the workflow was kicked off.
-    """
+    """Input to ApplyLensWorkflow."""
 
     lens_id: str
     session_id: str

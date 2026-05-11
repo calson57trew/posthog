@@ -197,9 +197,8 @@ class ObserveResponseSerializer(serializers.Serializer):
 
     workflow_id = serializers.CharField(
         help_text=(
-            "Temporal workflow id for this lens application. The endpoint returns before the "
-            "ReplayObservation row exists — the workflow creates it. Look up the resulting "
-            "observation via GET /vision/lenses/{id}/observations/?session_id=<session_id>."
+            "Temporal workflow id for this lens application. Look up the resulting "
+            "ReplayObservation via GET /vision/lenses/{id}/observations/?session_id=<session_id>."
         ),
     )
 
@@ -230,14 +229,12 @@ class ReplayLensViewSet(TeamAndOrgViewSetMixin, viewsets.ModelViewSet):
     def observe(self, request: Request, **kwargs: Any) -> Response:
         """Apply this lens to one specific session, on demand.
 
-        Bypasses the lens's query and sampling. The workflow owns observation row
-        creation, so this endpoint returns 202 with the workflow handle before any
-        row exists — clients look up the resulting `ReplayObservation` via the
+        Bypasses the lens's query and sampling. Returns 202 with the workflow
+        handle; clients look up the resulting `ReplayObservation` via the
         observations list filtered by `session_id`.
 
         Dedup: the deterministic per-(lens, session) workflow_id makes duplicate
-        dispatches coalesce in Temporal, and the create activity catches the
-        `UNIQUE(lens, session_id)` constraint and exits cleanly.
+        dispatches coalesce in Temporal.
         """
         lens = self.get_object()
         # Reading observation output reveals the underlying recording's contents, so triggering one

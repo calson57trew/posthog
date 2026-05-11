@@ -35,9 +35,7 @@ _STUB_NOT_IMPLEMENTED_REASON = (
 class ApplyLensWorkflow(PostHogWorkflow):
     """Apply one lens to one session.
 
-    The workflow owns the observation row's entire lifecycle — including creation.
-    Triggers (the per-lens schedule and the /observe/ action) just hand over the
-    lens, the session, and how it was kicked off; this workflow snapshots config,
+    Owns the observation row's entire lifecycle: snapshots the lens config,
     INSERTs the row, and drives it through the state machine.
 
     STUB: marks the observation running, then immediately failed. The real workflow

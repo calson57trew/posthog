@@ -12,9 +12,8 @@ from products.replay_vision.backend.temporal.types import MarkObservationFailedI
 def mark_observation_running_activity(inputs: MarkObservationRunningInputs) -> None:
     """Flip pending → running and stamp started_at.
 
-    workflow_id is set at row creation, so this activity only handles the state
-    transition. Bounded UPDATE on `status__in=(pending, running)` so a Temporal retry
-    that reruns the activity after we already moved on stays a no-op.
+    Bounded UPDATE on `status__in=(pending, running)` so a Temporal retry that
+    reruns the activity against an already-settled row stays a no-op.
     """
     observation_pk = uuid.UUID(inputs.observation_id)
     ReplayObservation.objects.filter(
