@@ -459,6 +459,16 @@ if get_from_env("POSTHOG_SESSION_RECORDING_REDIS_HOST", ""):
         os.getenv("POSTHOG_SESSION_RECORDING_REDIS_PORT", "6379"),
     )
 
+# Replay Vision uses a dedicated Redis (provider upload caches, quota counters,
+# per-provider concurrency semaphores) so it doesn't contend with the main Redis.
+REPLAY_VISION_REDIS_URL = REDIS_URL
+
+if get_from_env("POSTHOG_REPLAY_VISION_REDIS_HOST", ""):
+    REPLAY_VISION_REDIS_URL = "redis://{}:{}/".format(
+        os.getenv("POSTHOG_REPLAY_VISION_REDIS_HOST", ""),
+        os.getenv("POSTHOG_REPLAY_VISION_REDIS_PORT", "6379"),
+    )
+
 if not REDIS_URL:
     raise ImproperlyConfigured(
         "Env var REDIS_URL or POSTHOG_REDIS_HOST is absolutely required to run this software.\n"
