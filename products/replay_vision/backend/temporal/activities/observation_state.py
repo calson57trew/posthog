@@ -10,10 +10,11 @@ from products.replay_vision.backend.temporal.types import MarkObservationFailedI
 
 @activity.defn
 def mark_observation_running_activity(inputs: MarkObservationRunningInputs) -> None:
-    """Stamp workflow_id and flip pending → running.
+    """Flip pending → running and stamp started_at.
 
-    Bounded UPDATE on `status__in=(pending, running)` so a Temporal retry that
-    reruns the activity after we already moved on stays a no-op.
+    workflow_id is set at row creation, so this activity only handles the state
+    transition. Bounded UPDATE on `status__in=(pending, running)` so a Temporal retry
+    that reruns the activity after we already moved on stays a no-op.
     """
     observation_pk = uuid.UUID(inputs.observation_id)
     ReplayObservation.objects.filter(
@@ -21,7 +22,6 @@ def mark_observation_running_activity(inputs: MarkObservationRunningInputs) -> N
         status__in=[ObservationStatus.PENDING, ObservationStatus.RUNNING],
     ).update(
         status=ObservationStatus.RUNNING,
-        workflow_id=inputs.workflow_id,
         started_at=timezone.now(),
     )
 

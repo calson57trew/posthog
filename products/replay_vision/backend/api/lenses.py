@@ -1,8 +1,7 @@
-import copy
 from typing import Any, NoReturn, cast
 
 from django.conf import settings
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
 from django.db.models import QuerySet
 
 import structlog
@@ -22,10 +21,9 @@ from posthog.models.user import User
 from posthog.temporal.common.client import sync_connect
 
 from products.replay_vision.backend.api.constants import VISION_TAG
-from products.replay_vision.backend.api.observations import ReplayObservationSerializer
 from products.replay_vision.backend.feature_flag import ReplayVisionEnabledPermission
 from products.replay_vision.backend.models.replay_lens import LensModel, LensProvider, LensType, ReplayLens
-from products.replay_vision.backend.models.replay_observation import ObservationTrigger, ReplayObservation
+from products.replay_vision.backend.models.replay_observation import ObservationTrigger
 from products.replay_vision.backend.temporal.constants import APPLY_LENS_WORKFLOW_NAME
 from products.replay_vision.backend.temporal.types import ApplyLensInputs
 
@@ -194,6 +192,18 @@ class ObserveRequestSerializer(serializers.Serializer):
     )
 
 
+class ObserveResponseSerializer(serializers.Serializer):
+    """Async-accepted response for POST /vision/lenses/{id}/observe/."""
+
+    workflow_id = serializers.CharField(
+        help_text=(
+            "Temporal workflow id for this lens application. The endpoint returns before the "
+            "ReplayObservation row exists — the workflow creates it. Look up the resulting "
+            "observation via GET /vision/lenses/{id}/observations/?session_id=<session_id>."
+        ),
+    )
+
+
 @extend_schema(tags=[VISION_TAG])
 class ReplayLensViewSet(TeamAndOrgViewSetMixin, viewsets.ModelViewSet):
     """CRUD for Replay Vision lenses."""
@@ -214,18 +224,20 @@ class ReplayLensViewSet(TeamAndOrgViewSetMixin, viewsets.ModelViewSet):
 
     @extend_schema(
         request=ObserveRequestSerializer,
-        responses={
-            201: ReplayObservationSerializer,
-            200: ReplayObservationSerializer,
-        },
+        responses={202: ObserveResponseSerializer},
     )
     @action(detail=True, methods=["post"], url_path="observe")
     def observe(self, request: Request, **kwargs: Any) -> Response:
         """Apply this lens to one specific session, on demand.
 
-        Bypasses the lens's query and sampling. Idempotent against the
-        `UNIQUE(lens, session_id)` constraint — a second call for the same session
-        returns the existing observation (200) rather than creating a duplicate.
+        Bypasses the lens's query and sampling. The workflow owns observation row
+        creation, so this endpoint returns 202 with the workflow handle before any
+        row exists — clients look up the resulting `ReplayObservation` via the
+        observations list filtered by `session_id`.
+
+        Dedup: the deterministic per-(lens, session) workflow_id makes duplicate
+        dispatches coalesce in Temporal, and the create activity catches the
+        `UNIQUE(lens, session_id)` constraint and exits cleanly.
         """
         lens = self.get_object()
         # Reading observation output reveals the underlying recording's contents, so triggering one
@@ -238,50 +250,33 @@ class ReplayLensViewSet(TeamAndOrgViewSetMixin, viewsets.ModelViewSet):
         session_id: str = body.validated_data["session_id"]
         user = cast(User, request.user)
 
-        try:
-            with transaction.atomic():
-                observation = ReplayObservation.objects.create(
-                    lens=lens,
-                    team=lens.team,
-                    session_id=session_id,
-                    triggered_by=ObservationTrigger.ON_DEMAND,
-                    triggered_by_user=user,
-                    lens_version=lens.lens_version,
-                    lens_config_snapshot=copy.deepcopy(lens.lens_config),
-                )
-        except IntegrityError:
-            existing = ReplayObservation.objects.get(lens=lens, session_id=session_id)
-            return Response(ReplayObservationSerializer(existing).data, status=status.HTTP_200_OK)
-
-        # workflow_id is derived from observation.id so it's stable: a duplicate dispatch (e.g. retry
-        # after a transient failure between the row insert and start_workflow) coalesces in Temporal.
-        workflow_id = f"replay-vision-apply-lens-{observation.id}"
+        workflow_id = f"replay-vision-apply-lens-{lens.id}-{session_id}"
         try:
             client = sync_connect()
             async_to_sync(client.start_workflow)(  # type: ignore[misc]
                 APPLY_LENS_WORKFLOW_NAME,  # type: ignore[arg-type]
                 ApplyLensInputs(
-                    observation_id=str(observation.id),
                     lens_id=str(lens.id),
                     session_id=session_id,
                     team_id=lens.team_id,
+                    triggered_by=ObservationTrigger.ON_DEMAND,
+                    triggered_by_user_id=user.id,
                 ),
                 id=workflow_id,
                 task_queue=settings.REPLAY_VISION_TASK_QUEUE,
             )
         except Exception as exc:
-            # Don't strand the row in pending if dispatch fails — the user gets an error and the row
-            # records why. Temporal's WorkflowAlreadyStarted is benign (same observation_id ⇒ same
-            # workflow_id ⇒ same in-flight workflow); treat it as success.
-            if type(exc).__name__ == "WorkflowAlreadyStartedError":
-                logger.info("replay_vision.observe.workflow_already_started", workflow_id=workflow_id)
-            else:
+            # WorkflowAlreadyStarted is benign — same workflow_id ⇒ Temporal coalesced our dispatch
+            # into an already-in-flight run. The caller still gets the workflow_id back.
+            if type(exc).__name__ != "WorkflowAlreadyStartedError":
                 logger.exception("replay_vision.observe.workflow_start_failed", workflow_id=workflow_id)
-                observation.mark_failed(f"Failed to start workflow: {type(exc).__name__}: {exc}")
-                observation.refresh_from_db()
                 return Response(
-                    ReplayObservationSerializer(observation).data,
+                    {"error": "Failed to start observation workflow"},
                     status=status.HTTP_503_SERVICE_UNAVAILABLE,
                 )
+            logger.info("replay_vision.observe.workflow_already_started", workflow_id=workflow_id)
 
-        return Response(ReplayObservationSerializer(observation).data, status=status.HTTP_201_CREATED)
+        return Response(
+            ObserveResponseSerializer({"workflow_id": workflow_id}).data,
+            status=status.HTTP_202_ACCEPTED,
+        )

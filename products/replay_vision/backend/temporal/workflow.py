@@ -6,12 +6,15 @@ from temporalio import common
 from posthog.temporal.common.base import PostHogWorkflow
 
 from products.replay_vision.backend.temporal.activities import (
+    create_observation_activity,
     mark_observation_failed_activity,
     mark_observation_running_activity,
 )
 from products.replay_vision.backend.temporal.constants import APPLY_LENS_WORKFLOW_NAME
 from products.replay_vision.backend.temporal.types import (
     ApplyLensInputs,
+    CreateObservationInputs,
+    CreateObservationOutput,
     MarkObservationFailedInputs,
     MarkObservationRunningInputs,
 )
@@ -32,6 +35,11 @@ _STUB_NOT_IMPLEMENTED_REASON = (
 class ApplyLensWorkflow(PostHogWorkflow):
     """Apply one lens to one session.
 
+    The workflow owns the observation row's entire lifecycle — including creation.
+    Triggers (the per-lens schedule and the /observe/ action) just hand over the
+    lens, the session, and how it was kicked off; this workflow snapshots config,
+    INSERTs the row, and drives it through the state machine.
+
     STUB: marks the observation running, then immediately failed. The real workflow
     will rasterize the session, upload the video to the provider, call the LLM, and
     emit `$replay_lens` + flip succeeded in one terminal activity (see master plan).
@@ -42,16 +50,36 @@ class ApplyLensWorkflow(PostHogWorkflow):
     @wf.run
     async def run(self, inputs: ApplyLensInputs) -> None:
         workflow_id = wf.info().workflow_id
+
+        create_result: CreateObservationOutput = await wf.execute_activity(
+            create_observation_activity,
+            CreateObservationInputs(
+                lens_id=inputs.lens_id,
+                team_id=inputs.team_id,
+                session_id=inputs.session_id,
+                triggered_by=inputs.triggered_by,
+                triggered_by_user_id=inputs.triggered_by_user_id,
+                workflow_id=workflow_id,
+            ),
+            start_to_close_timeout=dt.timedelta(seconds=30),
+            retry_policy=_STATE_ACTIVITY_RETRY,
+        )
+        if not create_result.was_created:
+            # An existing observation already owns this (lens, session_id) — exit so we don't
+            # double-process. The original workflow drives that row to completion.
+            return
+
+        observation_id = create_result.observation_id
         await wf.execute_activity(
             mark_observation_running_activity,
-            MarkObservationRunningInputs(observation_id=inputs.observation_id, workflow_id=workflow_id),
+            MarkObservationRunningInputs(observation_id=observation_id),
             start_to_close_timeout=dt.timedelta(seconds=30),
             retry_policy=_STATE_ACTIVITY_RETRY,
         )
         await wf.execute_activity(
             mark_observation_failed_activity,
             MarkObservationFailedInputs(
-                observation_id=inputs.observation_id,
+                observation_id=observation_id,
                 error_reason=_STUB_NOT_IMPLEMENTED_REASON,
             ),
             start_to_close_timeout=dt.timedelta(seconds=30),
