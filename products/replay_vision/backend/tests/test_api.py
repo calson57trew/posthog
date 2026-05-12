@@ -357,10 +357,8 @@ class TestObserveAction(_VisionAPITestCase):
         expected_workflow_id = f"replay-vision-apply-lens-{self.lens.id}-sess-42"
         self.assertEqual(resp.json(), {"workflow_id": expected_workflow_id})
 
-        # No row exists yet — the workflow creates it.
         self.assertFalse(ReplayObservation.objects.filter(lens=self.lens, session_id="sess-42").exists())
 
-        # Workflow was dispatched with the expected id and inputs.
         mock_async_to_sync.assert_called_once_with(mock_client.start_workflow)
         args, kwargs = start_workflow.call_args
         self.assertEqual(args[0], APPLY_LENS_WORKFLOW_NAME)
@@ -376,9 +374,7 @@ class TestObserveAction(_VisionAPITestCase):
     def test_observe_dedup_uses_deterministic_workflow_id(
         self, mock_sync_connect: MagicMock, mock_async_to_sync: MagicMock
     ) -> None:
-        # Repeat call for the same (lens, session) hits the same workflow_id, so Temporal coalesces
-        # them. We assert here that the API itself produces a stable id — the actual coalescing is
-        # exercised by test_observe_workflow_already_started_is_treated_as_success.
+        # The actual coalescing is exercised by test_observe_workflow_already_started_is_treated_as_success.
         mock_sync_connect.return_value = MagicMock()
         start_workflow = MagicMock()
         mock_async_to_sync.return_value = start_workflow
@@ -387,28 +383,27 @@ class TestObserveAction(_VisionAPITestCase):
         second = self.client.post(self.observe_url(str(self.lens.id)), data={"session_id": "sess-dup"}, format="json")
         self.assertEqual(first.json()["workflow_id"], second.json()["workflow_id"])
 
-    def test_observe_requires_session_id(self, mock_sync_connect: MagicMock, mock_async_to_sync: MagicMock) -> None:
-        resp = self.client.post(self.observe_url(str(self.lens.id)), data={}, format="json")
-        self.assertEqual(resp.status_code, 400)
-        self.assertEqual(resp.json()["attr"], "session_id")
-
-    def test_observe_rejects_session_id_longer_than_workflow_id_column_can_hold(
-        self, mock_sync_connect: MagicMock, mock_async_to_sync: MagicMock
+    @parameterized.expand(
+        [
+            ("missing", {}),
+            ("too_long", {"session_id": "x" * 129}),
+        ]
+    )
+    def test_observe_rejects_invalid_session_id(
+        self,
+        _label: str,
+        body: dict,
+        mock_sync_connect: MagicMock,
+        mock_async_to_sync: MagicMock,
     ) -> None:
-        # The workflow_id is stored in ReplayObservation.workflow_id (max_length=255). Capping the
-        # request's session_id at 128 keeps the prefix + lens UUID + session_id under that ceiling
-        # for any accepted input.
-        too_long = "x" * 129
-        resp = self.client.post(self.observe_url(str(self.lens.id)), data={"session_id": too_long}, format="json")
+        resp = self.client.post(self.observe_url(str(self.lens.id)), data=body, format="json")
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.json()["attr"], "session_id")
 
     def test_observe_workflow_id_fits_observation_column_at_max_input(
         self, mock_sync_connect: MagicMock, mock_async_to_sync: MagicMock
     ) -> None:
-        # Companion to the validator test: the maximum-length session_id must produce a workflow_id
-        # that fits ReplayObservation.workflow_id (max_length=255). If someone widens session_id
-        # without re-checking the math, this test catches it.
+        # Catches widening session_id without re-checking the workflow_id column ceiling.
         mock_sync_connect.return_value = MagicMock()
         mock_async_to_sync.return_value = MagicMock()
         max_session_id = "x" * 128
@@ -429,7 +424,6 @@ class TestObserveAction(_VisionAPITestCase):
 
         resp = self.client.post(self.observe_url(str(self.lens.id)), data={"session_id": "sess-broken"}, format="json")
         self.assertEqual(resp.status_code, 503)
-        # No row was created — the workflow never ran. Caller can retry once Temporal is back.
         self.assertFalse(ReplayObservation.objects.filter(lens=self.lens, session_id="sess-broken").exists())
 
     def test_observe_workflow_already_started_is_treated_as_success(
@@ -453,9 +447,7 @@ class TestObserveAction(_VisionAPITestCase):
     def test_observe_workflow_already_started_with_mismatched_id_returns_503(
         self, mock_sync_connect: MagicMock, mock_async_to_sync: MagicMock
     ) -> None:
-        # If Temporal raises WorkflowAlreadyStartedError for a workflow_id we didn't dispatch (e.g.
-        # under a future id_reuse_policy that surfaces it for unrelated terminated runs), the
-        # endpoint must not silently 202.
+        # Mismatched workflow_id must not silently 202 under a future id_reuse_policy.
         mock_sync_connect.return_value = MagicMock()
         start_workflow = MagicMock(
             side_effect=WorkflowAlreadyStartedError(

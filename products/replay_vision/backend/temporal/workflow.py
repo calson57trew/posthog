@@ -33,15 +33,7 @@ _STUB_NOT_IMPLEMENTED_REASON = (
 
 @wf.defn(name=APPLY_LENS_WORKFLOW_NAME)
 class ApplyLensWorkflow(PostHogWorkflow):
-    """Apply one lens to one session.
-
-    Owns the observation row's entire lifecycle: snapshots the lens config,
-    INSERTs the row, and drives it through the state machine.
-
-    STUB: marks the observation running, then immediately failed. The real workflow
-    will rasterize the session, upload the video to the provider, call the LLM, and
-    emit `$replay_lens` + flip succeeded in one terminal activity (see master plan).
-    """
+    """Apply one lens to one session. STUB: marks the row failed; the real pipeline replaces that step."""
 
     inputs_cls = ApplyLensInputs
 
@@ -63,9 +55,7 @@ class ApplyLensWorkflow(PostHogWorkflow):
             retry_policy=_STATE_ACTIVITY_RETRY,
         )
         if not create_result.was_created:
-            # An existing observation already owns this (lens, session_id) — exit so we don't
-            # double-process. The original workflow drives that row to completion.
-            return
+            return  # Existing observation owns this (lens, session_id); its workflow drives it.
 
         observation_id = create_result.observation_id
         await wf.execute_activity(

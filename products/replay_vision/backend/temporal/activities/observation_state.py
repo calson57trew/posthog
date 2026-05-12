@@ -8,12 +8,7 @@ from products.replay_vision.backend.temporal.types import MarkObservationFailedI
 
 @activity.defn
 def mark_observation_running_activity(inputs: MarkObservationRunningInputs) -> None:
-    """Flip pending → running and stamp started_at.
-
-    Filtered on `status=PENDING` (the source state, not the target) so an
-    at-least-once retry that sees the row already in RUNNING is a no-op and
-    `started_at` keeps its original value.
-    """
+    """Flip pending → running. Idempotent: an at-least-once retry against the now-RUNNING row is a no-op."""
     ReplayObservation.objects.filter(
         pk=inputs.observation_id,
         status=ObservationStatus.PENDING,
@@ -25,12 +20,7 @@ def mark_observation_running_activity(inputs: MarkObservationRunningInputs) -> N
 
 @activity.defn
 def mark_observation_failed_activity(inputs: MarkObservationFailedInputs) -> None:
-    """Flip pending/running → failed with an error_reason.
-
-    Filtered on the non-terminal source states. Idempotent because the target
-    (FAILED) is not in the filter — a retry against an already-failed row finds
-    no match and stays a no-op, preserving the original `completed_at`.
-    """
+    """Flip pending/running → failed. Idempotent: FAILED is not in the source filter."""
     ReplayObservation.objects.filter(
         pk=inputs.observation_id,
         status__in=[ObservationStatus.PENDING, ObservationStatus.RUNNING],

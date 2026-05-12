@@ -210,8 +210,7 @@ class ReplayLensViewSet(TeamAndOrgViewSetMixin, viewsets.ModelViewSet):
     """CRUD for Replay Vision lenses."""
 
     scope_object = "replay_lens"
-    # Custom @action methods don't fall under the default read/write action lists, so personal API
-    # keys would 403 silently. List the action explicitly so :write tokens can call it.
+    # Custom actions must be listed explicitly or personal-API-key callers 403 silently.
     scope_object_write_actions = ["create", "update", "partial_update", "destroy", "observe"]
     permission_classes = [ReplayVisionEnabledPermission]
     serializer_class = ReplayLensSerializer
@@ -227,20 +226,16 @@ class ReplayLensViewSet(TeamAndOrgViewSetMixin, viewsets.ModelViewSet):
         request=ObserveRequestSerializer,
         responses={202: ObserveResponseSerializer},
     )
-    @action(detail=True, methods=["post"], url_path="observe")
+    @action(
+        detail=True,
+        methods=["post"],
+        url_path="observe",
+        required_scopes=["replay_lens:write", "session_recording:read"],
+    )
     def observe(self, request: Request, **kwargs: Any) -> Response:
-        """Apply this lens to one specific session, on demand.
-
-        Bypasses the lens's query and sampling. Returns 202 with the workflow
-        handle; clients look up the resulting `ReplayObservation` via the
-        observations list filtered by `session_id`.
-
-        Dedup: the deterministic per-(lens, session) workflow_id makes duplicate
-        dispatches coalesce in Temporal.
-        """
+        """Apply this lens to one specific session, on demand. Returns 202 with the workflow handle."""
         lens = self.get_object()
-        # Reading observation output reveals the underlying recording's contents, so triggering one
-        # requires session_recording read in addition to the replay_lens write scope.
+        # Observation output exposes recording contents, so observe requires session_recording read.
         if not self.user_access_control.check_access_level_for_resource("session_recording", required_level="viewer"):
             raise PermissionDenied("Triggering an on-demand observation requires session_recording read access.")
 
@@ -266,9 +261,7 @@ class ReplayLensViewSet(TeamAndOrgViewSetMixin, viewsets.ModelViewSet):
                 execution_timeout=dt.timedelta(hours=1),
             )
         except WorkflowAlreadyStartedError as exc:
-            # Defensive: with the default id_reuse_policy this only fires for our own in-flight
-            # workflow, but pin the contract so a future policy change can't silently 202 the caller
-            # for an unrelated terminated run.
+            # Pin to our own workflow_id so a future id_reuse_policy change can't silently 202 an unrelated run.
             if exc.workflow_id != workflow_id:
                 logger.exception("replay_vision.observe.workflow_id_mismatch", workflow_id=workflow_id)
                 return Response(

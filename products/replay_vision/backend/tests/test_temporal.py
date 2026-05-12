@@ -131,8 +131,7 @@ class TestCreateObservationActivity:
         assert existing.workflow_id != "wf-second"
 
     def test_propagates_non_unique_integrity_errors(self) -> None:
-        # An FK or CHECK violation (e.g. lens deleted concurrently between our SELECT and the
-        # INSERT) must surface as an activity failure, not be silently treated as a dedup hit.
+        # FK/CHECK violations must surface as activity failures, not silently fall into the dedup path.
         lens = _make_lens()
         fk_error = IntegrityError("insert or update on table violates foreign key constraint")
         fk_error.__cause__ = psycopg.errors.ForeignKeyViolation("violation")
@@ -150,28 +149,24 @@ class TestCreateObservationActivity:
                     )
                 )
 
-        # No row was created — caller can retry once the underlying issue clears.
         assert not ReplayObservation.objects.filter(lens=lens, session_id="sess-fk").exists()
 
-    def test_raises_when_lens_missing_or_wrong_team(self) -> None:
+    @pytest.mark.parametrize(
+        "case",
+        ["lens_does_not_exist", "lens_belongs_to_other_team"],
+    )
+    def test_raises_when_lens_not_found_for_team(self, case: str) -> None:
         lens = _make_lens()
-        with pytest.raises(ValueError):
-            create_observation_activity(
-                CreateObservationInputs(
-                    lens_id=uuid.uuid4(),
-                    team_id=lens.team_id,
-                    session_id="sess-1",
-                    triggered_by=ObservationTrigger.ON_DEMAND,
-                    triggered_by_user_id=None,
-                    workflow_id="wf-1",
-                )
-            )
+        if case == "lens_does_not_exist":
+            lens_id, team_id = uuid.uuid4(), lens.team_id
+        else:
+            lens_id, team_id = lens.id, lens.team_id + 999
 
         with pytest.raises(ValueError):
             create_observation_activity(
                 CreateObservationInputs(
-                    lens_id=lens.id,
-                    team_id=lens.team_id + 999,
+                    lens_id=lens_id,
+                    team_id=team_id,
                     session_id="sess-1",
                     triggered_by=ObservationTrigger.ON_DEMAND,
                     triggered_by_user_id=None,
@@ -224,7 +219,6 @@ class TestObservationStateActivities:
 
         observation.refresh_from_db()
         assert observation.status == ObservationStatus.RUNNING
-        # workflow_id is set at create time and untouched here.
         assert observation.workflow_id == "wf-1"
         assert observation.started_at is not None
 
@@ -264,9 +258,7 @@ class TestObservationStateActivities:
         assert observation.error_reason == "original"
 
     def test_mark_running_is_idempotent_against_already_running_rows(self) -> None:
-        # Temporal's at-least-once delivery can re-run the activity after the DB commit succeeded.
-        # The second call must not refresh `started_at` — duration metrics depend on it being the
-        # actual transition timestamp.
+        # `started_at` must survive at-least-once retries; duration metrics depend on it.
         lens = _make_lens()
         observation = _make_observation(lens)
         mark_observation_running_activity(MarkObservationRunningInputs(observation_id=observation.id))

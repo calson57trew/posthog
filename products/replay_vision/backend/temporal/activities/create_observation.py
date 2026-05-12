@@ -14,19 +14,13 @@ from products.replay_vision.backend.temporal.types import CreateObservationInput
 
 @activity.defn
 def create_observation_activity(inputs: CreateObservationInputs) -> CreateObservationOutput:
-    """Snapshot the lens config + version and INSERT the observation row in `pending`.
-
-    On `UNIQUE(lens_id, session_id)` conflict: return `was_created=False` so the
-    workflow can exit cleanly without racing the row that already owns the slot.
-    """
+    """Snapshot the lens config + version and INSERT the row in `pending`. Returns `was_created=False` on UNIQUE conflict."""
     lens = ReplayLens.objects.filter(pk=inputs.lens_id, team_id=inputs.team_id).first()
     if lens is None:
         raise ValueError(f"ReplayLens {inputs.lens_id} not found for team {inputs.team_id}")
 
     if inputs.triggered_by_user_id is not None:
-        # Triggers are trusted today (DRF auth on /observe/, internal schedule), but the activity
-        # is the persistence boundary — verify the user is in the lens's organization so a future
-        # trigger can't stamp an unrelated user onto the row.
+        # The activity is the persistence boundary, so re-check team membership rather than trusting the trigger.
         is_member = OrganizationMembership.objects.filter(
             user_id=inputs.triggered_by_user_id,
             organization_id=lens.team.organization_id,
@@ -50,8 +44,7 @@ def create_observation_activity(inputs: CreateObservationInputs) -> CreateObserv
                 triggered_by_user_id=inputs.triggered_by_user_id,
             )
     except IntegrityError as e:
-        # Narrow to the dedup case so FK violations (lens/team/user deleted mid-flight) surface as
-        # activity failures instead of silently falling into the "existing row" path.
+        # Only swallow the dedup case; FK / CHECK violations should fail the activity.
         if not isinstance(e.__cause__, psycopg.errors.UniqueViolation):
             raise
         existing = ReplayObservation.objects.get(lens_id=inputs.lens_id, session_id=inputs.session_id)
