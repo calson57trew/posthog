@@ -441,31 +441,28 @@ class TestEnsureSessionAssetActivity:
         assert await _count() == 1
 
     @pytest.mark.asyncio
-    async def test_refreshes_export_context_on_reuse_without_clobbering_outputs(self) -> None:
+    async def test_reuse_does_not_mutate_existing_asset(self) -> None:
         lens = await sync_to_async(_make_lens)()
         first = await ensure_session_asset_activity(
-            EnsureSessionAssetInputs(team_id=lens.team_id, session_id="sess-stale")
+            EnsureSessionAssetInputs(team_id=lens.team_id, session_id="sess-immutable")
         )
 
-        # Simulate a previous rasterize run that wrote the s3 uri + fingerprint, AND a stale render-param drift.
+        # Simulate a previous rasterize run writing output fields onto the asset.
         @sync_to_async
-        def _mutate() -> None:
+        def _stamp_output() -> None:
             asset = ExportedAsset.objects.get(pk=first.asset_id)
             ctx = dict(asset.export_context or {})
-            ctx["playback_speed"] = 999  # drifted
             ctx["render_fingerprint"] = "abcdef"
             ctx["content_location"] = "s3://prior/video.mp4"
             asset.export_context = ctx
             asset.save(update_fields=["export_context"])
 
-        await _mutate()
+        await _stamp_output()
 
-        await ensure_session_asset_activity(EnsureSessionAssetInputs(team_id=lens.team_id, session_id="sess-stale"))
+        await ensure_session_asset_activity(EnsureSessionAssetInputs(team_id=lens.team_id, session_id="sess-immutable"))
 
         asset = await ExportedAsset.objects.aget(pk=first.asset_id)
-        # Render params got snapped back; output fields stayed put so the rasterize cache can still hit.
         ctx = asset.export_context or {}
-        assert ctx["playback_speed"] == 8
         assert ctx["render_fingerprint"] == "abcdef"
         assert ctx["content_location"] == "s3://prior/video.mp4"
 
