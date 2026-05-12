@@ -1,3 +1,4 @@
+import datetime as dt
 from typing import Any, NoReturn, cast
 
 from django.conf import settings
@@ -262,9 +263,18 @@ class ReplayLensViewSet(TeamAndOrgViewSetMixin, viewsets.ModelViewSet):
                 ),
                 id=workflow_id,
                 task_queue=settings.REPLAY_VISION_TASK_QUEUE,
+                execution_timeout=dt.timedelta(hours=1),
             )
-        except WorkflowAlreadyStartedError:
-            # Same workflow_id ⇒ Temporal coalesced our dispatch into an already-in-flight run.
+        except WorkflowAlreadyStartedError as exc:
+            # Defensive: with the default id_reuse_policy this only fires for our own in-flight
+            # workflow, but pin the contract so a future policy change can't silently 202 the caller
+            # for an unrelated terminated run.
+            if exc.workflow_id != workflow_id:
+                logger.exception("replay_vision.observe.workflow_id_mismatch", workflow_id=workflow_id)
+                return Response(
+                    {"error": "Failed to start observation workflow"},
+                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
+                )
             logger.info("replay_vision.observe.workflow_already_started", workflow_id=workflow_id)
         except Exception:
             logger.exception("replay_vision.observe.workflow_start_failed", workflow_id=workflow_id)

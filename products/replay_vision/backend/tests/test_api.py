@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from posthog.test.base import APIBaseTest
 from unittest.mock import MagicMock, patch
 
@@ -363,6 +365,7 @@ class TestObserveAction(_VisionAPITestCase):
         args, kwargs = start_workflow.call_args
         self.assertEqual(args[0], APPLY_LENS_WORKFLOW_NAME)
         self.assertEqual(kwargs["id"], expected_workflow_id)
+        self.assertEqual(kwargs["execution_timeout"], timedelta(hours=1))
         inputs = args[1]
         self.assertEqual(inputs.lens_id, self.lens.id)
         self.assertEqual(inputs.session_id, "sess-42")
@@ -446,6 +449,26 @@ class TestObserveAction(_VisionAPITestCase):
         )
         self.assertEqual(resp.status_code, 202, resp.json())
         self.assertEqual(resp.json(), {"workflow_id": f"replay-vision-apply-lens-{self.lens.id}-sess-coalesce"})
+
+    def test_observe_workflow_already_started_with_mismatched_id_returns_503(
+        self, mock_sync_connect: MagicMock, mock_async_to_sync: MagicMock
+    ) -> None:
+        # If Temporal raises WorkflowAlreadyStartedError for a workflow_id we didn't dispatch (e.g.
+        # under a future id_reuse_policy that surfaces it for unrelated terminated runs), the
+        # endpoint must not silently 202.
+        mock_sync_connect.return_value = MagicMock()
+        start_workflow = MagicMock(
+            side_effect=WorkflowAlreadyStartedError(
+                workflow_id="some-unrelated-workflow-id",
+                workflow_type=APPLY_LENS_WORKFLOW_NAME,
+            )
+        )
+        mock_async_to_sync.return_value = start_workflow
+
+        resp = self.client.post(
+            self.observe_url(str(self.lens.id)), data={"session_id": "sess-mismatch"}, format="json"
+        )
+        self.assertEqual(resp.status_code, 503, resp.json())
 
 
 @patch("products.replay_vision.backend.api.lenses.async_to_sync")

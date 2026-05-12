@@ -10,12 +10,13 @@ from products.replay_vision.backend.temporal.types import MarkObservationFailedI
 def mark_observation_running_activity(inputs: MarkObservationRunningInputs) -> None:
     """Flip pending → running and stamp started_at.
 
-    Bounded UPDATE on `status__in=(pending, running)` so a Temporal retry that
-    reruns the activity against an already-settled row stays a no-op.
+    Filtered on `status=PENDING` (the source state, not the target) so an
+    at-least-once retry that sees the row already in RUNNING is a no-op and
+    `started_at` keeps its original value.
     """
     ReplayObservation.objects.filter(
         pk=inputs.observation_id,
-        status__in=[ObservationStatus.PENDING, ObservationStatus.RUNNING],
+        status=ObservationStatus.PENDING,
     ).update(
         status=ObservationStatus.RUNNING,
         started_at=timezone.now(),
@@ -26,8 +27,9 @@ def mark_observation_running_activity(inputs: MarkObservationRunningInputs) -> N
 def mark_observation_failed_activity(inputs: MarkObservationFailedInputs) -> None:
     """Flip pending/running → failed with an error_reason.
 
-    Same bounded UPDATE: a retried call after the row has already settled to
-    succeeded won't trample it back to failed.
+    Filtered on the non-terminal source states. Idempotent because the target
+    (FAILED) is not in the filter — a retry against an already-failed row finds
+    no match and stays a no-op, preserving the original `completed_at`.
     """
     ReplayObservation.objects.filter(
         pk=inputs.observation_id,

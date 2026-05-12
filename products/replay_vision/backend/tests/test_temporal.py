@@ -263,6 +263,21 @@ class TestObservationStateActivities:
         assert observation.status == terminal_status
         assert observation.error_reason == "original"
 
+    def test_mark_running_is_idempotent_against_already_running_rows(self) -> None:
+        # Temporal's at-least-once delivery can re-run the activity after the DB commit succeeded.
+        # The second call must not refresh `started_at` — duration metrics depend on it being the
+        # actual transition timestamp.
+        lens = _make_lens()
+        observation = _make_observation(lens)
+        mark_observation_running_activity(MarkObservationRunningInputs(observation_id=observation.id))
+        observation.refresh_from_db()
+        first_started_at = observation.started_at
+        assert first_started_at is not None
+
+        mark_observation_running_activity(MarkObservationRunningInputs(observation_id=observation.id))
+        observation.refresh_from_db()
+        assert observation.started_at == first_started_at
+
 
 @pytest.mark.asyncio
 @pytest.mark.django_db(transaction=True)
