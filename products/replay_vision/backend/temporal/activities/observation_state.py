@@ -1,5 +1,3 @@
-import uuid
-
 from django.utils import timezone
 
 from temporalio import activity
@@ -15,9 +13,8 @@ def mark_observation_running_activity(inputs: MarkObservationRunningInputs) -> N
     Bounded UPDATE on `status__in=(pending, running)` so a Temporal retry that
     reruns the activity against an already-settled row stays a no-op.
     """
-    observation_pk = uuid.UUID(inputs.observation_id)
     ReplayObservation.objects.filter(
-        pk=observation_pk,
+        pk=inputs.observation_id,
         status__in=[ObservationStatus.PENDING, ObservationStatus.RUNNING],
     ).update(
         status=ObservationStatus.RUNNING,
@@ -32,9 +29,8 @@ def mark_observation_failed_activity(inputs: MarkObservationFailedInputs) -> Non
     Same bounded UPDATE: a retried call after the row has already settled to
     succeeded won't trample it back to failed.
     """
-    observation_pk = uuid.UUID(inputs.observation_id)
     ReplayObservation.objects.filter(
-        pk=observation_pk,
+        pk=inputs.observation_id,
         status__in=[ObservationStatus.PENDING, ObservationStatus.RUNNING],
     ).update(
         status=ObservationStatus.FAILED,

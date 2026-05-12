@@ -364,7 +364,7 @@ class TestObserveAction(_VisionAPITestCase):
         self.assertEqual(args[0], APPLY_LENS_WORKFLOW_NAME)
         self.assertEqual(kwargs["id"], expected_workflow_id)
         inputs = args[1]
-        self.assertEqual(inputs.lens_id, str(self.lens.id))
+        self.assertEqual(inputs.lens_id, self.lens.id)
         self.assertEqual(inputs.session_id, "sess-42")
         self.assertEqual(inputs.team_id, self.team.id)
         self.assertEqual(inputs.triggered_by, ObservationTrigger.ON_DEMAND)
@@ -413,7 +413,9 @@ class TestObserveAction(_VisionAPITestCase):
         resp = self.client.post(self.observe_url(str(self.lens.id)), data={"session_id": max_session_id}, format="json")
         self.assertEqual(resp.status_code, 202, resp.json())
         workflow_id = resp.json()["workflow_id"]
-        self.assertLessEqual(len(workflow_id), ReplayObservation._meta.get_field("workflow_id").max_length)
+        max_length = ReplayObservation._meta.get_field("workflow_id").max_length
+        assert max_length is not None
+        self.assertLessEqual(len(workflow_id), max_length)
 
     def test_observe_dispatch_failure_returns_503(
         self, mock_sync_connect: MagicMock, mock_async_to_sync: MagicMock

@@ -1,10 +1,15 @@
 import uuid
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
+from typing import Any
 
 import pytest
+from unittest.mock import patch
 
+from django.db import IntegrityError
 from django.utils import timezone
 
+import psycopg.errors
 from asgiref.sync import sync_to_async
 from temporalio import activity
 from temporalio.testing import WorkflowEnvironment
@@ -65,7 +70,7 @@ class TestCreateObservationActivity:
         lens = _make_lens()
         result = create_observation_activity(
             CreateObservationInputs(
-                lens_id=str(lens.id),
+                lens_id=lens.id,
                 team_id=lens.team_id,
                 session_id="sess-1",
                 triggered_by=ObservationTrigger.ON_DEMAND,
@@ -90,7 +95,7 @@ class TestCreateObservationActivity:
         original_config = dict(lens.lens_config)
         result = create_observation_activity(
             CreateObservationInputs(
-                lens_id=str(lens.id),
+                lens_id=lens.id,
                 team_id=lens.team_id,
                 session_id="sess-1",
                 triggered_by=ObservationTrigger.SCHEDULE,
@@ -111,7 +116,7 @@ class TestCreateObservationActivity:
 
         result = create_observation_activity(
             CreateObservationInputs(
-                lens_id=str(lens.id),
+                lens_id=lens.id,
                 team_id=lens.team_id,
                 session_id="sess-dup",
                 triggered_by=ObservationTrigger.ON_DEMAND,
@@ -120,17 +125,40 @@ class TestCreateObservationActivity:
             )
         )
 
-        assert result == CreateObservationOutput(observation_id=str(existing.id), was_created=False)
+        assert result == CreateObservationOutput(observation_id=existing.id, was_created=False)
         # The original row wasn't touched.
         existing.refresh_from_db()
         assert existing.workflow_id != "wf-second"
+
+    def test_propagates_non_unique_integrity_errors(self) -> None:
+        # An FK or CHECK violation (e.g. lens deleted concurrently between our SELECT and the
+        # INSERT) must surface as an activity failure, not be silently treated as a dedup hit.
+        lens = _make_lens()
+        fk_error = IntegrityError("insert or update on table violates foreign key constraint")
+        fk_error.__cause__ = psycopg.errors.ForeignKeyViolation("violation")
+
+        with patch.object(ReplayObservation.objects, "create", side_effect=fk_error):
+            with pytest.raises(IntegrityError):
+                create_observation_activity(
+                    CreateObservationInputs(
+                        lens_id=lens.id,
+                        team_id=lens.team_id,
+                        session_id="sess-fk",
+                        triggered_by=ObservationTrigger.ON_DEMAND,
+                        triggered_by_user_id=None,
+                        workflow_id="wf-fk",
+                    )
+                )
+
+        # No row was created — caller can retry once the underlying issue clears.
+        assert not ReplayObservation.objects.filter(lens=lens, session_id="sess-fk").exists()
 
     def test_raises_when_lens_missing_or_wrong_team(self) -> None:
         lens = _make_lens()
         with pytest.raises(ValueError):
             create_observation_activity(
                 CreateObservationInputs(
-                    lens_id=str(uuid.uuid4()),
+                    lens_id=uuid.uuid4(),
                     team_id=lens.team_id,
                     session_id="sess-1",
                     triggered_by=ObservationTrigger.ON_DEMAND,
@@ -142,7 +170,7 @@ class TestCreateObservationActivity:
         with pytest.raises(ValueError):
             create_observation_activity(
                 CreateObservationInputs(
-                    lens_id=str(lens.id),
+                    lens_id=lens.id,
                     team_id=lens.team_id + 999,
                     session_id="sess-1",
                     triggered_by=ObservationTrigger.ON_DEMAND,
@@ -159,7 +187,7 @@ class TestCreateObservationActivity:
         with pytest.raises(ValueError, match="not a member"):
             create_observation_activity(
                 CreateObservationInputs(
-                    lens_id=str(lens.id),
+                    lens_id=lens.id,
                     team_id=lens.team_id,
                     session_id="sess-1",
                     triggered_by=ObservationTrigger.ON_DEMAND,
@@ -174,7 +202,7 @@ class TestCreateObservationActivity:
 
         result = create_observation_activity(
             CreateObservationInputs(
-                lens_id=str(lens.id),
+                lens_id=lens.id,
                 team_id=lens.team_id,
                 session_id="sess-1",
                 triggered_by=ObservationTrigger.ON_DEMAND,
@@ -192,7 +220,7 @@ class TestObservationStateActivities:
         observation = _make_observation(lens, workflow_id="wf-1")
         assert observation.status == ObservationStatus.PENDING
 
-        mark_observation_running_activity(MarkObservationRunningInputs(observation_id=str(observation.id)))
+        mark_observation_running_activity(MarkObservationRunningInputs(observation_id=observation.id))
 
         observation.refresh_from_db()
         assert observation.status == ObservationStatus.RUNNING
@@ -208,7 +236,7 @@ class TestObservationStateActivities:
         observation.save(update_fields=["status", "started_at"])
 
         mark_observation_failed_activity(
-            MarkObservationFailedInputs(observation_id=str(observation.id), error_reason="bad output")
+            MarkObservationFailedInputs(observation_id=observation.id, error_reason="bad output")
         )
 
         observation.refresh_from_db()
@@ -226,9 +254,9 @@ class TestObservationStateActivities:
         observation.error_reason = "original"
         observation.save(update_fields=["status", "completed_at", "error_reason"])
 
-        mark_observation_running_activity(MarkObservationRunningInputs(observation_id=str(observation.id)))
+        mark_observation_running_activity(MarkObservationRunningInputs(observation_id=observation.id))
         mark_observation_failed_activity(
-            MarkObservationFailedInputs(observation_id=str(observation.id), error_reason="late failure")
+            MarkObservationFailedInputs(observation_id=observation.id, error_reason="late failure")
         )
 
         observation.refresh_from_db()
@@ -256,7 +284,7 @@ async def test_apply_lens_workflow_creates_row_then_marks_failed_with_stub_reaso
                 await env.client.execute_workflow(
                     ApplyLensWorkflow.run,
                     ApplyLensInputs(
-                        lens_id=str(lens.id),
+                        lens_id=lens.id,
                         session_id="sess-1",
                         team_id=lens.team_id,
                         triggered_by=ObservationTrigger.ON_DEMAND,
@@ -305,7 +333,7 @@ async def test_apply_lens_workflow_no_ops_when_observation_already_exists() -> N
                 await env.client.execute_workflow(
                     ApplyLensWorkflow.run,
                     ApplyLensInputs(
-                        lens_id=str(lens.id),
+                        lens_id=lens.id,
                         session_id="sess-dup",
                         team_id=lens.team_id,
                         triggered_by=ObservationTrigger.ON_DEMAND,
@@ -332,7 +360,7 @@ async def test_apply_lens_workflow_no_ops_when_observation_already_exists() -> N
 async def test_apply_lens_workflow_orchestrates_activities_in_order() -> None:
     """Mock all three activities — verify the workflow calls them in the right order with the right inputs."""
     calls: list[tuple[str, dict]] = []
-    new_observation_id = str(uuid.uuid4())
+    new_observation_id = uuid.uuid4()
 
     @activity.defn(name="create_observation_activity")
     async def stub_create(inputs: CreateObservationInputs) -> CreateObservationOutput:
@@ -357,15 +385,16 @@ async def test_apply_lens_workflow_orchestrates_activities_in_order() -> None:
     async def stub_failed(inputs: MarkObservationFailedInputs) -> None:
         calls.append(("failed", {"observation_id": inputs.observation_id, "error_reason": inputs.error_reason}))
 
-    lens_id = str(uuid.uuid4())
+    lens_id = uuid.uuid4()
     workflow_id = f"replay-vision-apply-lens-{lens_id}-sess-x"
+    activities: list[Callable[..., Any]] = [stub_create, stub_running, stub_failed]
 
     async with await WorkflowEnvironment.start_time_skipping() as env:
         async with Worker(
             env.client,
             task_queue="replay-vision-test-queue",
             workflows=[ApplyLensWorkflow],
-            activities=[stub_create, stub_running, stub_failed],
+            activities=activities,
             workflow_runner=UnsandboxedWorkflowRunner(),
         ):
             await env.client.execute_workflow(
@@ -401,7 +430,7 @@ async def test_apply_lens_workflow_exits_when_create_returns_was_created_false()
     @activity.defn(name="create_observation_activity")
     async def stub_create(inputs: CreateObservationInputs) -> CreateObservationOutput:
         calls.append("create")
-        return CreateObservationOutput(observation_id=str(uuid.uuid4()), was_created=False)
+        return CreateObservationOutput(observation_id=uuid.uuid4(), was_created=False)
 
     @activity.defn(name="mark_observation_running_activity")
     async def stub_running(inputs: MarkObservationRunningInputs) -> None:
@@ -411,18 +440,20 @@ async def test_apply_lens_workflow_exits_when_create_returns_was_created_false()
     async def stub_failed(inputs: MarkObservationFailedInputs) -> None:
         calls.append("failed")
 
+    activities: list[Callable[..., Any]] = [stub_create, stub_running, stub_failed]
+
     async with await WorkflowEnvironment.start_time_skipping() as env:
         async with Worker(
             env.client,
             task_queue="replay-vision-test-queue",
             workflows=[ApplyLensWorkflow],
-            activities=[stub_create, stub_running, stub_failed],
+            activities=activities,
             workflow_runner=UnsandboxedWorkflowRunner(),
         ):
             await env.client.execute_workflow(
                 ApplyLensWorkflow.run,
                 ApplyLensInputs(
-                    lens_id=str(uuid.uuid4()),
+                    lens_id=uuid.uuid4(),
                     session_id="sess-y",
                     team_id=1,
                     triggered_by=ObservationTrigger.ON_DEMAND,

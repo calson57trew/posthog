@@ -1,8 +1,8 @@
 import copy
-import uuid
 
 from django.db import IntegrityError, transaction
 
+import psycopg.errors
 from temporalio import activity
 
 from posthog.models.organization import OrganizationMembership
@@ -19,8 +19,7 @@ def create_observation_activity(inputs: CreateObservationInputs) -> CreateObserv
     On `UNIQUE(lens_id, session_id)` conflict: return `was_created=False` so the
     workflow can exit cleanly without racing the row that already owns the slot.
     """
-    lens_pk = uuid.UUID(inputs.lens_id)
-    lens = ReplayLens.objects.filter(pk=lens_pk, team_id=inputs.team_id).first()
+    lens = ReplayLens.objects.filter(pk=inputs.lens_id, team_id=inputs.team_id).first()
     if lens is None:
         raise ValueError(f"ReplayLens {inputs.lens_id} not found for team {inputs.team_id}")
 
@@ -50,8 +49,12 @@ def create_observation_activity(inputs: CreateObservationInputs) -> CreateObserv
                 triggered_by=inputs.triggered_by,
                 triggered_by_user_id=inputs.triggered_by_user_id,
             )
-    except IntegrityError:
-        existing = ReplayObservation.objects.get(lens_id=lens_pk, session_id=inputs.session_id)
-        return CreateObservationOutput(observation_id=str(existing.id), was_created=False)
+    except IntegrityError as e:
+        # Narrow to the dedup case so FK violations (lens/team/user deleted mid-flight) surface as
+        # activity failures instead of silently falling into the "existing row" path.
+        if not isinstance(e.__cause__, psycopg.errors.UniqueViolation):
+            raise
+        existing = ReplayObservation.objects.get(lens_id=inputs.lens_id, session_id=inputs.session_id)
+        return CreateObservationOutput(observation_id=existing.id, was_created=False)
 
-    return CreateObservationOutput(observation_id=str(observation.id), was_created=True)
+    return CreateObservationOutput(observation_id=observation.id, was_created=True)

@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel
 
 from products.replay_vision.backend.models.replay_observation import ObservationTrigger
@@ -6,7 +8,7 @@ from products.replay_vision.backend.models.replay_observation import Observation
 class ApplyLensInputs(BaseModel, frozen=True):
     """Input to ApplyLensWorkflow."""
 
-    lens_id: str
+    lens_id: UUID
     session_id: str
     team_id: int
     triggered_by: ObservationTrigger
@@ -14,7 +16,7 @@ class ApplyLensInputs(BaseModel, frozen=True):
 
 
 class CreateObservationInputs(BaseModel, frozen=True):
-    lens_id: str
+    lens_id: UUID
     team_id: int
     session_id: str
     triggered_by: ObservationTrigger
@@ -25,14 +27,14 @@ class CreateObservationInputs(BaseModel, frozen=True):
 class CreateObservationOutput(BaseModel, frozen=True):
     """`was_created=False` means the row already existed; the caller should no-op."""
 
-    observation_id: str
+    observation_id: UUID
     was_created: bool
 
 
 class MarkObservationRunningInputs(BaseModel, frozen=True):
-    observation_id: str
+    observation_id: UUID
 
 
 class MarkObservationFailedInputs(BaseModel, frozen=True):
-    observation_id: str
+    observation_id: UUID
     error_reason: str

@@ -187,8 +187,6 @@ class ReplayLensFilter(django_filters.FilterSet):
 class ObserveRequestSerializer(serializers.Serializer):
     """Body of POST /vision/lenses/{id}/observe/."""
 
-    # Capped at 128 so the deterministic workflow_id stays under
-    # `ReplayObservation.workflow_id`'s 255-char column.
     session_id = serializers.CharField(
         max_length=128,
         help_text="ID of the session recording to apply the lens to.",
@@ -255,8 +253,8 @@ class ReplayLensViewSet(TeamAndOrgViewSetMixin, viewsets.ModelViewSet):
             client = sync_connect()
             async_to_sync(client.start_workflow)(  # type: ignore[misc]
                 APPLY_LENS_WORKFLOW_NAME,  # type: ignore[arg-type]
-                ApplyLensInputs(
-                    lens_id=str(lens.id),
+                ApplyLensInputs(  # type: ignore[arg-type]
+                    lens_id=lens.id,
                     session_id=session_id,
                     team_id=lens.team_id,
                     triggered_by=ObservationTrigger.ON_DEMAND,
