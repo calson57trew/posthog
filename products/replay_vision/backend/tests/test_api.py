@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 from django.utils import timezone
 
 from parameterized import parameterized
+from temporalio.exceptions import WorkflowAlreadyStartedError
 
 from posthog.models import Organization, Team
 
@@ -388,6 +389,32 @@ class TestObserveAction(_VisionAPITestCase):
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.json()["attr"], "session_id")
 
+    def test_observe_rejects_session_id_longer_than_workflow_id_column_can_hold(
+        self, mock_sync_connect: MagicMock, mock_async_to_sync: MagicMock
+    ) -> None:
+        # The workflow_id is stored in ReplayObservation.workflow_id (max_length=255). Capping the
+        # request's session_id at 128 keeps the prefix + lens UUID + session_id under that ceiling
+        # for any accepted input.
+        too_long = "x" * 129
+        resp = self.client.post(self.observe_url(str(self.lens.id)), data={"session_id": too_long}, format="json")
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.json()["attr"], "session_id")
+
+    def test_observe_workflow_id_fits_observation_column_at_max_input(
+        self, mock_sync_connect: MagicMock, mock_async_to_sync: MagicMock
+    ) -> None:
+        # Companion to the validator test: the maximum-length session_id must produce a workflow_id
+        # that fits ReplayObservation.workflow_id (max_length=255). If someone widens session_id
+        # without re-checking the math, this test catches it.
+        mock_sync_connect.return_value = MagicMock()
+        mock_async_to_sync.return_value = MagicMock()
+        max_session_id = "x" * 128
+
+        resp = self.client.post(self.observe_url(str(self.lens.id)), data={"session_id": max_session_id}, format="json")
+        self.assertEqual(resp.status_code, 202, resp.json())
+        workflow_id = resp.json()["workflow_id"]
+        self.assertLessEqual(len(workflow_id), ReplayObservation._meta.get_field("workflow_id").max_length)
+
     def test_observe_dispatch_failure_returns_503(
         self, mock_sync_connect: MagicMock, mock_async_to_sync: MagicMock
     ) -> None:
@@ -404,10 +431,12 @@ class TestObserveAction(_VisionAPITestCase):
         self, mock_sync_connect: MagicMock, mock_async_to_sync: MagicMock
     ) -> None:
         mock_sync_connect.return_value = MagicMock()
-        # Simulate Temporal coalescing a duplicate workflow_id (matches the WorkflowAlreadyStartedError
-        # the code matches by class name to stay SDK-version-tolerant).
-        already_started = type("WorkflowAlreadyStartedError", (RuntimeError,), {})("dup")
-        start_workflow = MagicMock(side_effect=already_started)
+        start_workflow = MagicMock(
+            side_effect=WorkflowAlreadyStartedError(
+                workflow_id=f"replay-vision-apply-lens-{self.lens.id}-sess-coalesce",
+                workflow_type=APPLY_LENS_WORKFLOW_NAME,
+            )
+        )
         mock_async_to_sync.return_value = start_workflow
 
         resp = self.client.post(

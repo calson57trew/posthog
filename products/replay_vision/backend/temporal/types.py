@@ -1,5 +1,7 @@
 from pydantic import BaseModel
 
+from products.replay_vision.backend.models.replay_observation import ObservationTrigger
+
 
 class ApplyLensInputs(BaseModel, frozen=True):
     """Input to ApplyLensWorkflow."""
@@ -7,7 +9,7 @@ class ApplyLensInputs(BaseModel, frozen=True):
     lens_id: str
     session_id: str
     team_id: int
-    triggered_by: str  # ObservationTrigger value: "schedule" | "on_demand"
+    triggered_by: ObservationTrigger
     triggered_by_user_id: int | None = None
 
 
@@ -15,7 +17,7 @@ class CreateObservationInputs(BaseModel, frozen=True):
     lens_id: str
     team_id: int
     session_id: str
-    triggered_by: str
+    triggered_by: ObservationTrigger
     triggered_by_user_id: int | None
     workflow_id: str
 

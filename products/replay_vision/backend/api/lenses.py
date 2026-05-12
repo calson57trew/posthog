@@ -14,6 +14,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.request import Request
 from rest_framework.response import Response
+from temporalio.exceptions import WorkflowAlreadyStartedError
 
 from posthog.api.routing import TeamAndOrgViewSetMixin
 from posthog.api.shared import UserBasicSerializer
@@ -186,8 +187,10 @@ class ReplayLensFilter(django_filters.FilterSet):
 class ObserveRequestSerializer(serializers.Serializer):
     """Body of POST /vision/lenses/{id}/observe/."""
 
+    # Capped at 128 so the deterministic workflow_id stays under
+    # `ReplayObservation.workflow_id`'s 255-char column.
     session_id = serializers.CharField(
-        max_length=200,
+        max_length=128,
         help_text="ID of the session recording to apply the lens to.",
     )
 
@@ -210,7 +213,7 @@ class ReplayLensViewSet(TeamAndOrgViewSetMixin, viewsets.ModelViewSet):
     scope_object = "replay_lens"
     # Custom @action methods don't fall under the default read/write action lists, so personal API
     # keys would 403 silently. List the action explicitly so :write tokens can call it.
-    scope_object_write_actions = ["create", "update", "partial_update", "patch", "destroy", "observe"]
+    scope_object_write_actions = ["create", "update", "partial_update", "destroy", "observe"]
     permission_classes = [ReplayVisionEnabledPermission]
     serializer_class = ReplayLensSerializer
     queryset = ReplayLens.objects.all()
@@ -262,16 +265,15 @@ class ReplayLensViewSet(TeamAndOrgViewSetMixin, viewsets.ModelViewSet):
                 id=workflow_id,
                 task_queue=settings.REPLAY_VISION_TASK_QUEUE,
             )
-        except Exception as exc:
-            # WorkflowAlreadyStarted is benign — same workflow_id ⇒ Temporal coalesced our dispatch
-            # into an already-in-flight run. The caller still gets the workflow_id back.
-            if type(exc).__name__ != "WorkflowAlreadyStartedError":
-                logger.exception("replay_vision.observe.workflow_start_failed", workflow_id=workflow_id)
-                return Response(
-                    {"error": "Failed to start observation workflow"},
-                    status=status.HTTP_503_SERVICE_UNAVAILABLE,
-                )
+        except WorkflowAlreadyStartedError:
+            # Same workflow_id ⇒ Temporal coalesced our dispatch into an already-in-flight run.
             logger.info("replay_vision.observe.workflow_already_started", workflow_id=workflow_id)
+        except Exception:
+            logger.exception("replay_vision.observe.workflow_start_failed", workflow_id=workflow_id)
+            return Response(
+                {"error": "Failed to start observation workflow"},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
         return Response(
             ObserveResponseSerializer({"workflow_id": workflow_id}).data,

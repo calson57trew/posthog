@@ -11,6 +11,7 @@ from temporalio.testing import WorkflowEnvironment
 from temporalio.worker import UnsandboxedWorkflowRunner, Worker
 
 from posthog.models import Organization, Team
+from posthog.models.user import User
 
 from products.replay_vision.backend.models.replay_lens import LensModel, LensType, ReplayLens
 from products.replay_vision.backend.models.replay_observation import (
@@ -149,6 +150,39 @@ class TestCreateObservationActivity:
                     workflow_id="wf-1",
                 )
             )
+
+    def test_raises_when_user_is_not_in_lens_organization(self) -> None:
+        lens = _make_lens()
+        outsider_org = Organization.objects.create(name="other-org")
+        outsider = User.objects.create_and_join(organization=outsider_org, email="x@x.com", password=None)
+
+        with pytest.raises(ValueError, match="not a member"):
+            create_observation_activity(
+                CreateObservationInputs(
+                    lens_id=str(lens.id),
+                    team_id=lens.team_id,
+                    session_id="sess-1",
+                    triggered_by=ObservationTrigger.ON_DEMAND,
+                    triggered_by_user_id=outsider.id,
+                    workflow_id="wf-1",
+                )
+            )
+
+    def test_accepts_user_in_lens_organization(self) -> None:
+        lens = _make_lens()
+        member = User.objects.create_and_join(organization=lens.team.organization, email="m@m.com", password=None)
+
+        result = create_observation_activity(
+            CreateObservationInputs(
+                lens_id=str(lens.id),
+                team_id=lens.team_id,
+                session_id="sess-1",
+                triggered_by=ObservationTrigger.ON_DEMAND,
+                triggered_by_user_id=member.id,
+                workflow_id="wf-1",
+            )
+        )
+        assert result.was_created is True
 
 
 @pytest.mark.django_db(transaction=True)
