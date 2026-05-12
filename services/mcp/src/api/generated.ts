@@ -20154,7 +20154,7 @@ export namespace Schemas {
     export interface ObserveRequest {
       /**
          * ID of the session recording to apply the lens to.
-         * @maxLength 200
+         * @maxLength 128
          */
       session_id: string;
     }

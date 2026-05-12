@@ -144,7 +144,7 @@ observations list filtered by `session_id`.
 Dedup: the deterministic per-(lens, session) workflow_id makes duplicate
 dispatches coalesce in Temporal.
  */
-export const visionLensesObserveCreateBodySessionIdMax = 200
+export const visionLensesObserveCreateBodySessionIdMax = 128
 
 export const VisionLensesObserveCreateBody = /* @__PURE__ */ zod
     .object({
