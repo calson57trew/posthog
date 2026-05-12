@@ -1,3 +1,4 @@
+from typing import Any
 from uuid import UUID
 
 from pydantic import BaseModel
@@ -38,3 +39,30 @@ class MarkObservationRunningInputs(BaseModel, frozen=True):
 class MarkObservationFailedInputs(BaseModel, frozen=True):
     observation_id: UUID
     error_reason: str
+
+
+class FetchSessionEventsInputs(BaseModel, frozen=True):
+    observation_id: UUID
+    team_id: int
+    session_id: str
+
+
+class LensLlmInputs(BaseModel, frozen=True):
+    """Per-session analytics events + recording metadata, stashed in Redis between activities."""
+
+    session_id: str
+    team_id: int
+    session_start_time: str  # ISO 8601
+    session_end_time: str  # ISO 8601
+    duration_seconds: float
+    columns: list[str]
+    events: list[list[Any]]
+
+
+class EnsureSessionAssetInputs(BaseModel, frozen=True):
+    team_id: int
+    session_id: str
+
+
+class EnsureSessionAssetOutput(BaseModel, frozen=True):
+    asset_id: int
