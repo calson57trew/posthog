@@ -648,6 +648,25 @@
         }
     },
     {
+        "model": "anthropic/claude-opus-4.7-fast",
+        "cost": {
+            "default": {
+                "prompt_token": 0.00003,
+                "completion_token": 0.00015,
+                "cache_read_token": 0.000003,
+                "cache_write_token": 0.0000375,
+                "web_search": 0.01
+            },
+            "anthropic": {
+                "prompt_token": 0.00003,
+                "completion_token": 0.00015,
+                "cache_read_token": 0.000003,
+                "cache_write_token": 0.0000375,
+                "web_search": 0.01
+            }
+        }
+    },
+    {
         "model": "anthropic/claude-sonnet-4",
         "cost": {
             "default": {
@@ -1581,7 +1600,7 @@
                 "cache_read_token": 8.7e-7
             },
             "siliconflow-fp8": {
-                "prompt_token": 0.00000174,
+                "prompt_token": 0.00000165,
                 "completion_token": 0.00000348,
                 "cache_read_token": 1.45e-7
             },
@@ -2289,7 +2308,7 @@
                 "completion_token": 1.3e-7
             },
             "sambanova": {
-                "prompt_token": 3.5e-7,
+                "prompt_token": 2.2e-7,
                 "completion_token": 5.9e-7
             }
         }
@@ -3243,8 +3262,8 @@
                 "completion_token": 0.00000138
             },
             "sambanova": {
-                "prompt_token": 3e-7,
-                "completion_token": 0.0000012
+                "prompt_token": 2.2e-7,
+                "completion_token": 5.9e-7
             },
             "siliconflow-fp8": {
                 "prompt_token": 3e-7,
@@ -3280,11 +3299,11 @@
         "model": "minimax/minimax-m2.7",
         "cost": {
             "default": {
-                "prompt_token": 2e-7,
+                "prompt_token": 2.8e-7,
                 "completion_token": 0.0000012
             },
             "dekallm-fp4": {
-                "prompt_token": 2e-7,
+                "prompt_token": 2.8e-7,
                 "completion_token": 0.0000012
             },
             "fireworks": {
@@ -3779,13 +3798,8 @@
         "cost": {
             "default": {
                 "prompt_token": 4e-7,
-                "completion_token": 0.00000198,
-                "cache_read_token": 5e-8
-            },
-            "ambient": {
-                "prompt_token": 4e-7,
-                "completion_token": 0.00000198,
-                "cache_read_token": 5e-8
+                "completion_token": 0.0000019,
+                "cache_read_token": 9e-8
             },
             "atlas-cloud-int4": {
                 "prompt_token": 4.9e-7,
@@ -3817,9 +3831,9 @@
                 "cache_read_token": 1e-7
             },
             "modelrun-fp4": {
-                "prompt_token": 4.5e-7,
-                "completion_token": 0.000002,
-                "cache_read_token": 1e-7
+                "prompt_token": 4e-7,
+                "completion_token": 0.0000019,
+                "cache_read_token": 9e-8
             },
             "moonshotai-int4": {
                 "prompt_token": 6e-7,
@@ -3867,6 +3881,11 @@
             "akashml-int4": {
                 "prompt_token": 9.5e-7,
                 "completion_token": 0.000004
+            },
+            "ambient": {
+                "prompt_token": 9.5e-7,
+                "completion_token": 0.000004,
+                "cache_read_token": 2e-7
             },
             "atlas-cloud-int4": {
                 "prompt_token": 9.5e-7,
@@ -5547,6 +5566,19 @@
         }
     },
     {
+        "model": "perceptron/perceptron-mk1",
+        "cost": {
+            "default": {
+                "prompt_token": 1.5e-7,
+                "completion_token": 0.0000015
+            },
+            "perceptron": {
+                "prompt_token": 1.5e-7,
+                "completion_token": 0.0000015
+            }
+        }
+    },
+    {
         "model": "perplexity/sonar",
         "cost": {
             "default": {
@@ -6612,7 +6644,7 @@
                 "cache_read_token": 5e-8
             },
             "dekallm-fp8": {
-                "prompt_token": 1.9e-7,
+                "prompt_token": 1.5e-7,
                 "completion_token": 0.000001
             },
             "nextbit-fp8": {
