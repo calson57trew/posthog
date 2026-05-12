@@ -202,14 +202,7 @@ export const getVisionLensesObserveCreateUrl = (projectId: string, id: string) =
 }
 
 /**
- * Apply this lens to one specific session, on demand.
-
-Bypasses the lens's query and sampling. Returns 202 with the workflow
-handle; clients look up the resulting `ReplayObservation` via the
-observations list filtered by `session_id`.
-
-Dedup: the deterministic per-(lens, session) workflow_id makes duplicate
-dispatches coalesce in Temporal.
+ * Apply this lens to one specific session, on demand. Returns 202 with the workflow handle.
  */
 export const visionLensesObserveCreate = async (
     projectId: string,
